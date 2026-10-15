@@ -14,7 +14,7 @@ const travelImages = [
     alt: "Golden light over a sweeping travel landscape",
   },
   {
-    src: "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?auto=format&fit=crop&w=2000&q=78",
+    src: "https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     alt: "Colorful Italian coastal villages",
   },
   {
@@ -38,7 +38,7 @@ const travelImages = [
     alt: "Open countryside beneath a wide sky",
   },
   {
-    src: "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?auto=format&fit=crop&w=2000&q=78",
+    src: "https://images.unsplash.com/photo-1499678329028-101435549a4e?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     alt: "Northern lights above a winter landscape",
   },
   {
