@@ -9,7 +9,14 @@ export const createRequestSchema = z.object({
   traveler_count: z.number().int().min(1).max(50).default(1),
   priority: z.enum(["normal", "high", "urgent"]).default("normal"),
   description: z.string().trim().min(10).max(5000),
-  service_ids: z.array(z.string().uuid()).min(1).max(20),
+  service_ids: z
+    .array(z.string().uuid())
+    .min(1, "Select at least one service.")
+    .max(20, "You can select up to 20 services.")
+    .refine(
+      (ids) => new Set(ids).size === ids.length,
+      "Duplicate services are not allowed."
+    ),
 }).superRefine((value, ctx) => {
   if (value.travel_start_date && value.travel_end_date && value.travel_end_date < value.travel_start_date) {
     ctx.addIssue({ code: "custom", path: ["travel_end_date"], message: "Travel end date cannot be before the start date." });

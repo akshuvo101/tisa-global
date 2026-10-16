@@ -1,3 +1,6 @@
+
+import { Compass, Search } from "lucide-react";
+
 import DestinationCard from "@/components/explore/DestinationCard";
 import CategoryFilters from "@/components/explore/CategoryFilters";
 
@@ -19,32 +22,43 @@ export default function ExploreResults({
   onClearFilters,
 }: ExploreResultsProps) {
   return (
-    <section className="py-16">
+    <section className="pb-16 pt-6 sm:pb-20 sm:pt-8">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {/* Filters */}
+        {/* Category filters */}
         <CategoryFilters
           categories={categories}
           activeCategory={activeCategory}
           onChange={onCategoryChange}
         />
 
-        {/* Heading */}
-        <div className="mt-12">
-          <p className="text-sm text-muted">
-            {destinations.length}{" "}
-            {destinations.length === 1 ? "destination" : "destinations"}
-          </p>
+        {/* Results heading */}
+        <div className="mt-8 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-5">
+          <div>
+            <p className="mb-2 flex items-center gap-2 text-sm text-muted">
+              <Compass size={15} className="text-primary" />
+              Discover your next destination
+            </p>
 
-          <h2 className="mt-1 text-2xl font-semibold tracking-[-0.03em] text-white">
-            {activeCategory === "All"
-              ? "Explore destinations"
-              : `${activeCategory} destinations`}
-          </h2>
+            <h2 className="text-2xl font-semibold tracking-[-0.035em] text-white sm:text-3xl">
+              {activeCategory === "All"
+                ? "Explore destinations"
+                : `${activeCategory} destinations`}
+            </h2>
+          </div>
+
+          <p
+            className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <span className="text-white">{destinations.length}</span>{" "}
+            {destinations.length === 1 ? "place" : "places"} found
+          </p>
         </div>
 
-        {/* Results */}
+        {/* Destination cards */}
         {destinations.length > 0 ? (
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {destinations.map((destination) => (
               <DestinationCard
                 key={destination.id}
@@ -53,9 +67,9 @@ export default function ExploreResults({
             ))}
           </div>
         ) : (
-          <div className="mt-8 rounded-3xl border border-border bg-surface px-6 py-16 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary-soft text-xl text-primary">
-              ⌕
+          <div className="mt-6 rounded-3xl border border-border bg-surface px-6 py-14 text-center sm:py-16">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-surface-light text-muted">
+              <Search size={23} />
             </div>
 
             <h3 className="mt-5 text-lg font-semibold text-white">
@@ -63,15 +77,16 @@ export default function ExploreResults({
             </h3>
 
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted">
-              Try a different destination name, country, city, or category.
+              We couldn&apos;t find any destinations matching your search.
+              Try another place, country, city, or category.
             </p>
 
             <button
               type="button"
               onClick={onClearFilters}
-              className="mt-6 rounded-xl border border-border bg-surface-light px-4 py-2.5 text-sm font-medium text-white transition-colors hover:border-primary/30 hover:text-primary"
+              className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             >
-              Clear filters
+              Clear all filters
             </button>
           </div>
         )}
