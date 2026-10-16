@@ -720,6 +720,15 @@ function PlannerPageContent() {
 
     setPlanned(true);
     setSaved(false);
+
+    requestAnimationFrame(() => {
+      document
+        .getElementById("trip-results")
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    });
   }
 
   function handleEditPlan() {
@@ -909,7 +918,7 @@ function PlannerPageContent() {
           {/* Planner form */}
           <form
             onSubmit={handleSubmit}
-            className="h-fit rounded-3xl border border-white/8 bg-[#0d131d] p-6 lg:sticky lg:top-8"
+            className="relative z-20 h-fit rounded-3xl border border-white/8 bg-[#0d131d] p-4 sm:p-6 lg:sticky lg:top-8"
           >
             <div>
               <p className="text-sm font-semibold text-white">
@@ -1148,50 +1157,38 @@ function PlannerPageContent() {
 
             <button
               type="submit"
-              className="mt-7 flex h-12 w-full items-center justify-center rounded-xl bg-white text-sm font-semibold text-slate-950 transition-transform hover:scale-[1.01]"
+              className="mt-7 flex h-12 w-full touch-manipulation items-center justify-center rounded-xl bg-white text-sm font-semibold text-slate-950 transition-transform hover:scale-[1.01] active:scale-[0.98]"
             >
-              Build My Trip
-              <span className="ml-2">
-                →
-              </span>
+              Build My Trip <span className="ml-2">→</span>
             </button>
           </form>
 
           {/* Results */}
-          <div>
+
+          {/* Results */}
+          <div
+            id="trip-results"
+            className="scroll-mt-24"
+            aria-live="polite"
+          >
             {!planned ? (
               <EmptyPlannerState />
             ) : (
               <PlannerResult
-                destination={
-                  destination
-                }
+                destination={destination}
                 form={form}
-                prototypeBudget={
-                  prototypeBudget
-                }
-                aiEstimate={
-                  aiEstimate
-                }
-                aiCostEstimate={
-                  aiCostEstimate
-                }
-                aiDocuments={
-                  aiDocuments
-                }
-                itinerary={
-                  itinerary
-                }
+                prototypeBudget={prototypeBudget}
+                aiEstimate={aiEstimate}
+                aiCostEstimate={aiCostEstimate}
+                aiDocuments={aiDocuments}
+                itinerary={itinerary}
                 saved={saved}
-                onSave={
-                  handleSaveTrip
-                }
-                onEdit={
-                  handleEditPlan
-                }
+                onSave={handleSaveTrip}
+                onEdit={handleEditPlan}
               />
             )}
           </div>
+
         </div>
       </section>
     </main>

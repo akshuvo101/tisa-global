@@ -16,7 +16,25 @@ export async function GET() {
   if (!user) return NextResponse.json({ success: false, error: { code: "UNAUTHORIZED", message: "Please sign in." } }, { status: 401 });
   if (role !== "admin") return NextResponse.json({ success: false, error: { code: "FORBIDDEN", message: "Operations access required." } }, { status: 403 });
   const { data, error } = await supabase.from("integration_sync_runs").select("id,provider,kind,status,started_at,completed_at,records_found,records_created,records_updated,records_skipped,error_message").order("started_at", { ascending: false }).limit(40);
-  if (error) return NextResponse.json({ success: false, error: { code: "DATABASE_ERROR", message: "Unable to load integration runs." } }, { status: 500 });
+  if (error) {
+    console.error("[Integrations GET] Database query failed:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "DATABASE_ERROR",
+          message: "Unable to load integration runs.",
+        },
+      },
+      { status: 500 },
+    );
+  }
   return NextResponse.json({ success: true, data: { sources: integrationSources, runs: data ?? [] } });
 }
 

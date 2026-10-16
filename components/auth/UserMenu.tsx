@@ -1,6 +1,14 @@
+
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useLayoutEffect,
+} from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
@@ -12,16 +20,88 @@ export default function UserMenu() {
   const pathname = usePathname();
   const { user, profile, loading, error } = useAuth();
   const supabase = useMemo(() => createClient(), []);
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({
+    top: 0,
+    right: 16,
+    maxHeight: 400,
+  });
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
 
   useEffect(() => {
-    function closeOnOutsideClick(event: MouseEvent) {
+    setMounted(true);
+  }, []);
+
+  const updateMenuPosition = () => {
+    const button = buttonRef.current;
+    if (!button) return;
+
+    const rect = button.getBoundingClientRect();
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const horizontalPadding = 12;
+    const menuWidth = Math.min(256, viewportWidth - horizontalPadding * 2);
+    const gap = 8;
+
+    const spaceBelow = viewportHeight - rect.bottom - gap - 12;
+    const spaceAbove = rect.top - gap - 12;
+
+    const openAbove = spaceBelow < 240 && spaceAbove > spaceBelow;
+
+    const availableHeight = Math.max(
+      120,
+      openAbove ? spaceAbove : spaceBelow
+    );
+
+    setMenuPosition({
+      top: openAbove
+        ? Math.max(12, rect.top - gap - Math.min(400, availableHeight))
+        : rect.bottom + gap,
+      right: Math.max(
+        horizontalPadding,
+        Math.min(
+          viewportWidth - rect.right,
+          viewportWidth - menuWidth - horizontalPadding
+        )
+      ),
+      maxHeight: Math.min(400, availableHeight),
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    updateMenuPosition();
+
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function closeOnOutsideClick(event: PointerEvent) {
+      const target = event.target;
+
+      if (!(target instanceof Node)) return;
+
       if (
-        event.target instanceof Node &&
-        !containerRef.current?.contains(event.target)
+        !containerRef.current?.contains(target) &&
+        !menuRef.current?.contains(target)
       ) {
         setOpen(false);
       }
@@ -30,42 +110,41 @@ export default function UserMenu() {
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setOpen(false);
+        buttonRef.current?.focus();
       }
     }
 
-    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("pointerdown", closeOnOutsideClick);
     document.addEventListener("keydown", closeOnEscape);
 
     return () => {
-      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, []);
+  }, [open]);
 
   async function handleSignOut() {
     setSigningOut(true);
     setSignOutError("");
-    let authError: Error | null;
+
     try {
-      const result = await supabase.auth.signOut();
-      authError = result.error;
+      const { error: authError } = await supabase.auth.signOut();
+
+      if (authError) {
+        console.error("Supabase sign-out failed:", authError);
+        setSignOutError("Unable to sign out. Please try again.");
+        setSigningOut(false);
+        return;
+      }
+
+      setOpen(false);
+      router.replace("/");
+      router.refresh();
     } catch (error) {
       console.error("Supabase sign-out request failed:", error);
       setSignOutError("Unable to sign out. Please try again.");
       setSigningOut(false);
-      return;
     }
-
-    if (authError) {
-      console.error("Supabase sign-out failed:", authError);
-      setSignOutError("Unable to sign out. Please try again.");
-      setSigningOut(false);
-      return;
-    }
-
-    setOpen(false);
-    router.replace("/");
-    router.refresh();
   }
 
   if (loading && !user) {
@@ -90,51 +169,43 @@ export default function UserMenu() {
 
   const displayName =
     profile?.full_name?.trim() || user.email || "TISA account";
+
   const initials = displayName
     .split(/\s+/)
     .slice(0, 2)
     .map((part) => part[0])
     .join("")
     .toUpperCase();
+
   const profileHref =
     profile?.role === "admin" ? "/admin/profile" : "/account/profile";
+
   const dashboardHref =
-    profile?.role === "admin" ? "/admin" : profile?.role === "customer" ? "/account" : null;
+    profile?.role === "admin"
+      ? "/admin"
+      : profile?.role === "customer"
+        ? "/account"
+        : null;
+
   const isOnDashboard = pathname === dashboardHref;
 
-  return (
-    <div className="relative" ref={containerRef}>
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
-        className="flex h-10 max-w-52 items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-2.5 text-sm text-white transition hover:border-white/20 hover:bg-white/[0.07]"
-      >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sky-400/15 text-[11px] font-semibold text-sky-200">
-          {profile?.avatar_url ? (
-            <Image
-              src={profile.avatar_url}
-              alt=""
-              width={28}
-              height={28}
-              unoptimized
-              className="h-7 w-7 object-cover"
-            />
-          ) : (
-            initials || "T"
-          )}
-        </span>
-        <span className="truncate">{displayName}</span>
-        <span aria-hidden="true" className="text-[10px] text-slate-500">
-          ▾
-        </span>
-      </button>
-
-      {open && (
+  const dropdown =
+    open && mounted
+      ? createPortal(
         <div
+          ref={menuRef}
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#0c121d] p-2 shadow-2xl shadow-black/40"
+          aria-label="Account menu"
+          style={{
+            position: "fixed",
+            top: menuPosition.top,
+            right: menuPosition.right,
+            width: "min(16rem, calc(100vw - 1.5rem))",
+            maxHeight: menuPosition.maxHeight,
+            overflowY: "auto",
+            zIndex: 9999,
+          }}
+          className="overscroll-contain rounded-2xl border border-white/10 bg-[#0c121d] p-2 shadow-2xl shadow-black/40"
         >
           <div className="border-b border-white/[0.07] px-3 py-3">
             <p className="truncate text-sm font-medium text-white">
@@ -143,6 +214,7 @@ export default function UserMenu() {
             <p className="mt-0.5 truncate text-xs text-slate-500">
               {profile?.email || user.email}
             </p>
+
             {error && (
               <p role="alert" className="mt-2 text-xs text-amber-300">
                 {error}
@@ -164,6 +236,7 @@ export default function UserMenu() {
                   : "My account"}
             </Link>
           )}
+
           {profile && (
             <Link
               role="menuitem"
@@ -180,6 +253,7 @@ export default function UserMenu() {
               {signOutError}
             </p>
           )}
+
           <button
             type="button"
             role="menuitem"
@@ -189,8 +263,44 @@ export default function UserMenu() {
           >
             {signingOut ? "Signing out..." : "Log out"}
           </button>
-        </div>
-      )}
+        </div>,
+        document.body
+      )
+      : null;
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        ref={buttonRef}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-10 max-w-52 items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-2.5 text-sm text-white transition hover:border-white/20 hover:bg-white/[0.07]"
+      >
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sky-400/15 text-[11px] font-semibold text-sky-200">
+          {profile?.avatar_url ? (
+            <Image
+              src={profile.avatar_url}
+              alt=""
+              width={28}
+              height={28}
+              unoptimized
+              className="h-7 w-7 object-cover"
+            />
+          ) : (
+            initials || "T"
+          )}
+        </span>
+
+        <span className="truncate">{displayName}</span>
+
+        <span aria-hidden="true" className="text-[10px] text-slate-500">
+          ▾
+        </span>
+      </button>
+
+      {dropdown}
     </div>
   );
 }
