@@ -2,8 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { Bookmark, Compass, Sparkles } from "lucide-react";
 
 import SavedDestinationCard from "@/components/account/SavedDestinationCard";
+import PortalPageHeader from "@/components/account/PortalPageHeader";
+import PortalEmptyState from "@/components/account/PortalEmptyState";
 import { destinations } from "@/lib/data/destination";
 import { getSavedDestinationIds } from "@/lib/saved-destinations";
 
@@ -13,6 +16,7 @@ export default function SavedDestinationsPage() {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
 
   const savedDestinations = useMemo(() => {
     const destinationMap = new Map(
@@ -25,6 +29,17 @@ export default function SavedDestinationsPage() {
         Boolean(destination),
       );
   }, [savedDestinationIds]);
+  const categories = useMemo(
+    () => ["All", ...new Set(savedDestinations.flatMap((destination) => destination.category))],
+    [savedDestinations],
+  );
+  const visibleDestinations = useMemo(
+    () =>
+      activeCategory === "All"
+        ? savedDestinations
+        : savedDestinations.filter((destination) => destination.category.some((category) => category === activeCategory)),
+    [activeCategory, savedDestinations],
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -70,51 +85,20 @@ export default function SavedDestinationsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="portal-page min-h-screen bg-background text-foreground">
       
 
       <section className="mx-auto w-full max-w-7xl px-5 pb-20 pt-12 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col gap-6 border-b border-white/[0.08] pb-8 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <Link
-              href="/account"
-              className="mb-5 inline-flex items-center gap-2 text-sm text-slate-500 transition hover:text-white"
-            >
-              <span aria-hidden="true">←</span>
-              Back to Account
-            </Link>
-
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[0.18em] text-sky-300">
-                  Your collection
-                </p>
-
-                <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl">
-                  Saved Destinations
-                </h1>
-              </div>
-
-              {!isLoading && (
-                <span className="mt-7 inline-flex h-7 min-w-7 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-2 text-xs font-medium text-slate-300">
-                  {savedDestinations.length}
-                </span>
-              )}
-            </div>
-
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-              Keep the places you want to explore later in one place.
-            </p>
-          </div>
-
-          <Link
-            href="/explore"
-            className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
-          >
-            Explore Destinations
+        <PortalPageHeader
+          eyebrow="YOUR COLLECTION"
+          title="Saved destinations"
+          description="Keep the places you are curious about close by. Filter your collection or explore somewhere new."
+        >
+          {!isLoading && <span className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-400/20 bg-violet-400/10 px-3.5 text-xs font-semibold text-violet-800 dark:text-violet-200"><Bookmark aria-hidden="true" className="h-4 w-4" />{savedDestinations.length} saved</span>}
+          <Link href="/explore" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-semibold text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105">
+            <Compass aria-hidden="true" className="h-4 w-4" />Explore destinations
           </Link>
-        </div>
+        </PortalPageHeader>
 
         {/* Error */}
         {error && (
@@ -161,55 +145,37 @@ export default function SavedDestinationsPage() {
 
         {/* Empty */}
         {!isLoading && !error && savedDestinations.length === 0 && (
-          <div className="mt-10 flex min-h-[420px] items-center justify-center rounded-3xl border border-dashed border-white/[0.1] bg-white/[0.015] px-6">
-            <div className="max-w-md text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.04] text-2xl text-slate-400">
-                ☆
-              </div>
-
-              <h2 className="mt-6 text-xl font-semibold tracking-[-0.02em] text-white">
-                No saved destinations yet
-              </h2>
-
-              <p className="mt-3 text-sm leading-6 text-slate-500">
-                Start exploring destinations and save the places you would
-                like to visit later.
-              </p>
-
-              <Link
-                href="/explore"
-                className="mt-7 inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
-              >
-                Explore Destinations
-              </Link>
-            </div>
+          <div className="mt-8">
+            <PortalEmptyState icon={Compass} emoji="🌍" title="Your map is waiting" description="Save a destination from Explore and it will be ready for you here whenever inspiration strikes." action={{ label: "Explore destinations", href: "/explore" }} />
           </div>
         )}
 
         {/* Saved destinations */}
         {!isLoading && !error && savedDestinations.length > 0 && (
           <div className="mt-10">
-            <div className="mb-5 flex items-center justify-between gap-4">
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-white">
-                  Your saved places
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Destinations you may want to explore next.
-                </p>
+                <h2 className="text-base font-semibold text-foreground">Your saved places</h2>
+                <p className="mt-1 text-xs text-muted">A collection of destinations to revisit.</p>
               </div>
+              <p className="inline-flex items-center gap-1.5 text-xs text-muted"><Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-amber-500" />{visibleDestinations.length} shown</p>
             </div>
 
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {savedDestinations.map((destination) => (
+            <div className="mb-4 flex gap-2 overflow-x-auto pb-1" aria-label="Filter saved destinations">
+              {categories.map((category) => (
+                <button key={category} type="button" aria-pressed={activeCategory === category} onClick={() => setActiveCategory(category)} className={`shrink-0 rounded-full border px-3 py-1.5 text-xs capitalize transition ${activeCategory === category ? "border-primary/25 bg-primary-soft text-primary" : "border-border bg-surface/70 text-muted hover:text-foreground"}`}>{category}</button>
+              ))}
+            </div>
+
+            {visibleDestinations.length ? <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleDestinations.map((destination) => (
                 <SavedDestinationCard
                   key={destination.id}
                   destination={destination}
                   onRemoved={handleDestinationRemoved}
                 />
               ))}
-            </div>
+            </div> : <PortalEmptyState icon={Compass} title={`No ${activeCategory.toLowerCase()} destinations saved`} description="Try a different collection filter or explore new places to add to your list." action={{ label: "Explore destinations", href: "/explore" }} />}
           </div>
         )}
       </section>

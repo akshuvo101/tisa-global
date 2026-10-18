@@ -23,15 +23,15 @@ export default function TripWorkspacePage() {
     }).catch((err) => setError(err instanceof Error ? err.message : "Unable to load trip."));
   }, [params.id]);
 
-  if (error) return <main className="min-h-screen bg-background text-foreground"><div className="mx-auto max-w-5xl px-6 py-20"><p className="text-red-300">{error}</p><Link href="/account/trips" className="mt-4 inline-block text-primary">← My Trips</Link></div></main>;
-  if (!data) return <main className="min-h-screen bg-background text-foreground"><div className="mx-auto max-w-5xl px-6 py-20 text-sm text-muted">Loading your trip workspace…</div></main>;
+  if (error) return <main className="portal-page min-h-screen bg-background text-foreground"><div className="mx-auto max-w-5xl px-6 py-20"><p className="text-red-300">{error}</p><Link href="/account/trips" className="mt-4 inline-block text-primary">← My Trips</Link></div></main>;
+  if (!data) return <main className="portal-page min-h-screen bg-background text-foreground"><div className="mx-auto max-w-5xl px-6 py-20 text-sm text-muted">Loading your trip workspace…</div></main>;
 
   const { trip, request, profile, readiness, timeline } = data;
   const docs = request.request_documents || [];
   const bookings = request.bookings || [];
   const quotes = request.quotes || [];
 
-  return <main className="min-h-screen bg-background text-foreground"><section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
+  return <main className="portal-page min-h-screen bg-background text-foreground"><section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
     <Link href="/account/trips" className="text-sm text-muted hover:text-white">← My Trips</Link>
     <div className="mt-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"><div><p className="text-xs uppercase tracking-[0.2em] text-primary">Trip workspace</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">{getDestinationLabel(request.destination_city, request.destination_country, "International")} journey</h1><p className="mt-2 text-sm text-muted">{getDestinationLabel(request.destination_city, null, "International")}{request.destination_country ? `, ${getDestinationCountryLabel(request.destination_country)}` : ""} · {request.travel_start_date || "Date TBD"}{request.travel_end_date ? ` → ${request.travel_end_date}` : ""}</p></div><span className="rounded-full border border-white/10 px-4 py-2 text-sm capitalize text-slate-300">{trip.readiness_status.replaceAll("_", " ")}</span></div>
 

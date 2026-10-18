@@ -1,58 +1,115 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Bell,
+  CalendarDays,
+  Check,
+  ChevronRight,
+  Compass,
+  FileText,
+  MessageCircle,
+  Plane,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
+
 import { useAuth } from "@/components/auth/AuthProvider";
-import type { RequestStatus } from "@/types/tisa";
-import type {
-  CustomerDashboardData,
-} from "@/types/customer-dashboard";
+import DestinationCover from "@/components/account/DestinationCover";
 import { getDestinationLabel } from "@/lib/data/destination-label";
+import type { CustomerDashboardData } from "@/types/customer-dashboard";
+import type { RequestStatus } from "@/types/tisa";
 
-const requestStages: RequestStatus[] = [
-  "requested",
-  "reviewing",
-  "need_documents",
-  "documents_received",
-  "quoted",
-  "quote_accepted",
-  "processing",
-  "confirmed",
-  "completed",
-];
-
-const stageLabels: Record<RequestStatus, string> = {
-  requested: "Received",
-  reviewing: "In review",
+const statusLabels: Record<RequestStatus, string> = {
+  requested: "Request received",
+  reviewing: "Being reviewed",
   need_documents: "Documents needed",
   documents_received: "Documents received",
   quoted: "Quote ready",
   quote_accepted: "Quote accepted",
-  processing: "Processing",
+  processing: "In progress",
   confirmed: "Confirmed",
-  completed: "Complete",
+  completed: "Completed",
   cancelled: "Cancelled",
   on_hold: "On hold",
 };
 
-async function readJson<T>(response: Response, fallback: string): Promise<T> {
+async function readJson<T>(
+  response: Response,
+  fallback: string,
+): Promise<T> {
   const result = await response.json();
+
   if (!response.ok || !result.success) {
     throw new Error(result.error?.message || fallback);
   }
+
   return result.data as T;
 }
 
 function formatDate(value: string) {
-  return new Date(`${value}T00:00:00`).toLocaleDateString(undefined, {
+  const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? `${value}T12:00:00`
+    : value;
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Date unavailable";
+  }
+
+  return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 }
 
+const features = [
+  {
+    title: "My requests",
+    description: "Track your requests, updates, and next steps.",
+    href: "/account/requests",
+    icon: MessageCircle,
+    emoji: "📋",
+    accent: "sky",
+    action: "View requests",
+  },
+  {
+    title: "Explore destinations",
+    description: "Discover new places and plan your next journey.",
+    href: "/explore",
+    icon: Compass,
+    emoji: "🌍",
+    accent: "mint",
+    action: "Start exploring",
+  },
+  {
+    title: "TISA AI",
+    description: "Explore travel ideas, scholarships, and global events.",
+    href: "/ai",
+    icon: Sparkles,
+    emoji: "✨",
+    accent: "violet",
+    action: "Ask TISA AI",
+  },
+  {
+    title: "My profile",
+    description: "Keep your details ready for a smoother experience.",
+    href: "/account/profile",
+    icon: UserRound,
+    emoji: "👤",
+    accent: "amber",
+    action: "Edit profile",
+  },
+] as const;
+
 export default function AccountPage() {
   const { user, profile } = useAuth();
+
   const [data, setData] = useState<CustomerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -64,6 +121,7 @@ export default function AccountPage() {
     async function loadDashboard() {
       setLoading(true);
       setError("");
+
       try {
         const response = await fetch("/api/account/dashboard");
         const dashboard = await readJson<CustomerDashboardData>(
@@ -76,6 +134,7 @@ export default function AccountPage() {
         }
       } catch (loadError) {
         console.error("Customer dashboard data load failed:", loadError);
+
         if (active) {
           setError(
             loadError instanceof Error
@@ -84,11 +143,14 @@ export default function AccountPage() {
           );
         }
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     }
 
     void loadDashboard();
+
     return () => {
       active = false;
     };
@@ -98,6 +160,7 @@ export default function AccountPage() {
     () => data?.requests.flatMap((request) => request.quotes ?? []) ?? [],
     [data],
   );
+
   const allDocuments = useMemo(
     () =>
       data?.requests.flatMap((request) =>
@@ -113,499 +176,612 @@ export default function AccountPage() {
       ) ?? [],
     [data],
   );
+
   const openRequests =
     data?.requests.filter(
       (request) => !["completed", "cancelled"].includes(request.status),
     ) ?? [];
-  const pendingActions =
-    allDocuments.filter(
-      (document) =>
-        document.required &&
-        ["required", "rejected", "expired"].includes(document.status),
-    ).length + allQuotes.filter((quote) => quote.status === "sent").length;
-  const awaitingQuotes = allQuotes.filter(
+
+  const requiredDocuments = allDocuments.filter(
+    (document) =>
+      document.required &&
+      ["required", "rejected", "expired"].includes(document.status),
+  );
+
+  const quotesToReview = allQuotes.filter(
     (quote) => quote.status === "sent",
-  ).length;
-  const confirmedBookings =
-    data?.bookings.filter(
-      (booking) =>
-        ["confirmed", "travel_ready"].includes(booking.status) &&
-        booking.confirmation_status === "confirmed",
-    ).length ?? 0;
-  const conversations =
-    data?.requests.filter((request) => request.request_messages.length > 0)
-      .length ?? 0;
+  );
 
   const upcomingJourneys = data?.upcomingJourneys ?? [];
+  const requestById = new Map(
+    (data?.requests ?? []).map((request) => [request.id, request]),
+  );
 
   const displayName =
-    profile?.full_name?.trim() || user?.email?.split("@")[0] || "Traveler";
+    profile?.full_name?.trim().split(/\s+/)[0] ||
+    user?.email?.split("@")[0] ||
+    "traveler";
 
-  const metrics = [
+  const nextStep = requiredDocuments[0]
+    ? {
+        kind: "document" as const,
+        itemId: requiredDocuments[0].id,
+        requestId: requiredDocuments[0].requestId,
+        title:
+          requiredDocuments[0].status === "rejected"
+            ? "Update a requested document"
+            : requiredDocuments[0].status === "expired"
+              ? "Replace an expired document"
+              : "Send a requested document",
+        detail: `${requiredDocuments[0].document_type} · ${requiredDocuments[0].destination}`,
+        label: "Open request",
+        href: `/account/requests/${requiredDocuments[0].requestId}`,
+        status:
+          requiredDocuments[0].status === "rejected"
+            ? "Needs update"
+            : requiredDocuments[0].status === "expired"
+              ? "Expired"
+              : "Requested",
+        requestStatus:
+          requestById.get(requiredDocuments[0].requestId)?.status,
+        icon: FileText,
+        tone: "amber",
+      }
+    : quotesToReview[0]
+      ? {
+          kind: "quote" as const,
+          itemId: quotesToReview[0].id,
+          requestId: quotesToReview[0].request_id,
+          title: "A quote is ready for your review",
+          detail: `${quotesToReview[0].quote_number} · ${quotesToReview[0].currency} ${Number(quotesToReview[0].total_amount).toLocaleString()}`,
+          label: "Review quote",
+          href: "/account/quotes",
+          status: "Sent",
+          requestStatus:
+            requestById.get(quotesToReview[0].request_id)?.status,
+          icon: FileText,
+          tone: "violet",
+        }
+      : openRequests[0]
+        ? {
+            kind: "request" as const,
+            itemId: openRequests[0].id,
+            requestId: openRequests[0].id,
+            title: "Continue your request",
+            detail: getDestinationLabel(
+              openRequests[0].destination_city,
+              openRequests[0].destination_country,
+              "Your travel request",
+            ),
+            label: "View request",
+            href: `/account/requests/${openRequests[0].id}`,
+            status: statusLabels[openRequests[0].status],
+            requestStatus: openRequests[0].status,
+            icon: ArrowRight,
+            tone: "sky",
+          }
+        : null;
+  const NextStepIcon = nextStep?.icon ?? ArrowRight;
+  const remainingDocuments = requiredDocuments.filter(
+    (document) =>
+      nextStep?.kind !== "document" || document.id !== nextStep.itemId,
+  );
+  const remainingQuotes = quotesToReview.filter(
+    (quote) => nextStep?.kind !== "quote" || quote.id !== nextStep.itemId,
+  );
+  const recentRequests = (data?.requests ?? [])
+    .filter(
+      (request) =>
+        !nextStep ||
+        request.id !== nextStep.requestId,
+    )
+    .slice(0, 4);
+
+  const summaries = [
     {
       label: "Active requests",
       value: openRequests.length,
-      note: "Your journeys in progress",
-      href: "/account/requests",
-      icon: "↗",
-      tone: "cyan",
+      icon: MessageCircle,
+      emoji: "🧭",
+      tone: "sky",
     },
     {
-      label: "Pending actions",
-      value: pendingActions,
-      note: "Documents or quotes to review",
-      href: "/account/documents",
-      icon: "✳",
+      label: "Needs your input",
+      value: requiredDocuments.length + quotesToReview.length,
+      icon: FileText,
+      emoji: "📝",
       tone: "amber",
     },
-    {
-      label: "Conversations",
-      value: conversations,
-      note: "Requests with team messages",
-      href: "/account/messages",
-      icon: "◌",
-      tone: "violet",
-    },
-    {
-      label: "Quotes to review",
-      value: awaitingQuotes,
-      note: "Ready for your response",
-      href: "/account/quotes",
-      icon: "◇",
-      tone: "blue",
-    },
-    {
-      label: "Confirmed bookings",
-      value: confirmedBookings,
-      note: "Services confirmed by TISA",
-      href: "/account/bookings",
-      icon: "✓",
-      tone: "green",
-    },
-    {
-      label: "Upcoming journeys",
-      value: upcomingJourneys.length,
-      note: "Confirmed bookings with future dates",
-      href: "/account/trips",
-      icon: "✈",
-      tone: "rose",
-    },
+    ...(upcomingJourneys.length > 0
+      ? [{
+          label: "Upcoming trips",
+          value: upcomingJourneys.length,
+          icon: Plane,
+          emoji: "✈️",
+          tone: "mint",
+        }]
+      : []),
   ] as const;
 
   return (
-    <main className="space-y-7">
-      <section className="dashboard-enter relative isolate overflow-hidden rounded-[28px] border border-cyan-100/[0.12] bg-[#0d1a25] px-6 py-8 sm:px-9 sm:py-10 lg:px-11 lg:py-12">
+    <main className="account-overview mx-auto w-full max-w-[1320px] space-y-6 sm:space-y-8">
+      {/* Welcome hero */}
+      <section className="account-overview-hero relative isolate overflow-hidden rounded-[28px] border border-border p-5 shadow-[0_18px_50px_rgba(15,35,55,0.08)] sm:p-7 lg:flex lg:items-center lg:justify-between lg:gap-8 lg:p-9">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_82%_8%,rgba(45,212,191,0.18),transparent_32%),radial-gradient(ellipse_at_100%_100%,rgba(56,189,248,0.14),transparent_44%),linear-gradient(118deg,#101c28_0%,#0c1721_55%,#10232b_100%)]"
+          className="account-overview-hero__orb account-overview-hero__orb--one"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -right-14 -top-20 -z-10 h-72 w-72 rounded-full border border-cyan-100/[0.08] sm:right-[9%] sm:top-[-110px] sm:h-[420px] sm:w-[420px]"
+          className="account-overview-hero__orb account-overview-hero__orb--two"
         />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute right-[7%] top-1/2 -z-10 hidden h-32 w-52 -translate-y-1/2 rotate-[-18deg] border-t border-dashed border-cyan-100/20 sm:block"
-        />
-        <div className="max-w-2xl">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-200/80">
-            Your journey, thoughtfully handled
-          </p>
-          <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-white sm:text-4xl lg:text-[42px]">
+
+        <div className="relative z-10 min-w-0 flex-1">
+          <span className="account-eyebrow">
+            <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
+            YOUR PERSONAL TRAVEL SPACE
+          </span>
+
+          <h1 className="mt-4 break-words text-3xl font-bold tracking-tight text-foreground sm:text-4xl lg:text-[42px] lg:leading-[1.15]">
             Welcome back, {displayName}
+            <span className="ml-2 inline-block origin-bottom-right animate-[wave_1.8s_ease-in-out_infinite] motion-reduce:animate-none">
+              👋
+            </span>
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300/75 sm:text-[15px]">
-            Your personal space for every detail, update, and next step in your
-            international travel plans.
+
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-muted sm:text-base">
+            Your next adventure starts here. Manage your travel requests,
+            discover exciting destinations, and let TISA help you plan your
+            next move.
           </p>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Link
-              href="/planner"
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-cyan-200 px-5 text-sm font-semibold text-[#09202a] shadow-[0_7px_28px_rgba(103,232,249,0.14)] transition hover:-translate-y-0.5 hover:bg-cyan-100 active:translate-y-0"
-            >
-              Plan a Trip <span aria-hidden="true">↗</span>
-            </Link>
-            <Link
-              href="/account/requests"
-              className="inline-flex min-h-11 items-center rounded-xl border border-white/[0.12] bg-white/[0.035] px-5 text-sm font-medium text-white transition hover:bg-white/[0.08]"
-            >
-              Track a request
-            </Link>
+
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className="account-hero-chip">
+              <Plane aria-hidden="true" className="h-3.5 w-3.5" />
+              Travel assistance
+            </span>
+            <span className="account-hero-chip">
+              <Compass aria-hidden="true" className="h-3.5 w-3.5" />
+              Global opportunities
+            </span>
           </div>
         </div>
-        <div className="absolute bottom-5 right-7 hidden items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-cyan-100/30 sm:flex">
-          <span className="h-px w-8 bg-cyan-100/30" /> TISA · Your world awaits
+
+        <div className="relative z-10 mt-6 flex shrink-0 flex-col gap-3 sm:flex-row lg:mt-0 lg:flex-col">
+          <Link href="/request" className="account-secondary-action">
+            <MessageCircle aria-hidden="true" className="h-4 w-4" />
+            Start a new request
+          </Link>
+        </div>
+
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-10 top-1/2 hidden -translate-y-1/2 opacity-[0.07] lg:block"
+        >
+          <Plane className="h-64 w-64 -rotate-12" />
         </div>
       </section>
 
+      {/* Error state */}
       {error && (
         <div
           role="alert"
-          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-300/15 bg-rose-300/[0.06] px-5 py-4 text-sm text-rose-200"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-800 dark:text-rose-200"
         >
-          {error}
+          <span>{error}</span>
           <button
             type="button"
             onClick={() => setReloadKey((current) => current + 1)}
-            className="rounded-lg border border-rose-200/15 px-3 py-2 text-xs font-medium text-rose-100 transition hover:bg-rose-200/[0.08]"
+            className="min-h-10 rounded-lg border border-rose-500/20 px-3 text-xs font-semibold transition hover:bg-rose-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             Try again
           </button>
         </div>
       )}
 
+      {/* Feature cards */}
+      <section
+        aria-label="Customer features"
+        className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
+      >
+        {features.map((feature) => {
+          const Icon = feature.icon;
+
+          return (
+            <Link
+              key={feature.title}
+              href={feature.href}
+              data-accent={feature.accent}
+              className="account-feature-card group"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <span className="account-feature-card__icon">
+                  <Icon aria-hidden="true" className="h-5 w-5" />
+                </span>
+
+                <span
+                  aria-hidden="true"
+                  className="account-feature-card__emoji"
+                >
+                  {feature.emoji}
+                </span>
+              </div>
+
+              <h2 className="mt-5 text-base font-semibold text-foreground">
+                {feature.title}
+              </h2>
+
+              <p className="mt-2 text-xs leading-5 text-muted">
+                {feature.description}
+              </p>
+
+              <span className="account-feature-card__action">
+                {feature.action}
+                <ArrowRight
+                  aria-hidden="true"
+                  className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                />
+              </span>
+            </Link>
+          );
+        })}
+      </section>
+
+      {/* Loading state */}
       {loading ? (
-        <div
+        <section
           aria-label="Loading your travel dashboard"
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+          className="grid gap-4 xl:grid-cols-[1.3fr_.7fr]"
         >
-          {metrics.map((metric) => (
-            <div
-              key={metric.label}
-              className="h-[130px] animate-pulse rounded-2xl border border-white/[0.07] bg-white/[0.025]"
-            />
-          ))}
-        </div>
+          <div className="account-loading-card h-64" />
+          <div className="account-loading-card h-64" />
+        </section>
       ) : data ? (
         <>
+          {/* Summary cards */}
           <section
-            aria-label="Travel summary"
-            className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+            aria-label="Request summary"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-3"
           >
-            {metrics.map((metric, index) => (
-              <Link
-                key={metric.label}
-                href={metric.href}
-                style={{ animationDelay: `${index * 55}ms` }}
-                className="dashboard-enter group flex min-h-[130px] items-start justify-between rounded-2xl border border-white/[0.075] bg-[#0c131d] p-5 transition duration-200 hover:-translate-y-1 hover:border-white/[0.14] hover:bg-[#101a26] sm:p-6"
-              >
-                <div>
-                  <p className="text-xs font-medium text-slate-400">
-                    {metric.label}
-                  </p>
-                  <p className="mt-3 text-[30px] font-semibold leading-none tracking-tight text-white">
-                    {metric.value}
-                  </p>
-                  <p className="mt-3 text-[11px] text-slate-600">
-                    {metric.note}
-                  </p>
-                </div>
-                <span
-                  className={`grid h-10 w-10 place-items-center rounded-xl border text-base transition group-hover:scale-105 ${metric.tone === "cyan" ? "border-cyan-200/10 bg-cyan-200/[0.08] text-cyan-200" : metric.tone === "amber" ? "border-amber-200/10 bg-amber-200/[0.08] text-amber-200" : metric.tone === "violet" ? "border-violet-200/10 bg-violet-200/[0.08] text-violet-200" : metric.tone === "blue" ? "border-sky-200/10 bg-sky-200/[0.08] text-sky-200" : metric.tone === "green" ? "border-emerald-200/10 bg-emerald-200/[0.08] text-emerald-200" : "border-rose-200/10 bg-rose-200/[0.08] text-rose-200"}`}
-                  aria-hidden="true"
+            {summaries.map((summary) => {
+              const Icon = summary.icon;
+
+              return (
+                <div
+                  key={summary.label}
+                  data-accent={summary.tone}
+                  className="account-mini-card"
                 >
-                  {metric.icon}
-                </span>
-              </Link>
-            ))}
+                  <span className="account-mini-card__icon">
+                    <Icon aria-hidden="true" className="h-5 w-5" />
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-2xl font-bold leading-7 text-foreground">
+                      {summary.value}
+                    </span>
+                    <span className="mt-1 block text-xs text-muted">
+                      {summary.label}
+                    </span>
+                  </span>
+
+                  <span aria-hidden="true" className="account-mini-card__emoji">
+                    {summary.emoji}
+                  </span>
+                </div>
+              );
+            })}
           </section>
 
-          <div className="grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
-            <section className="rounded-2xl border border-white/[0.075] bg-[#0c131d] p-5 sm:p-6">
-              <div className="flex items-center justify-between gap-4">
+          {nextStep && (
+            <section
+              aria-labelledby="dashboard-next-step-title"
+              className={`account-next-step account-next-step--${nextStep.tone}`}
+            >
+              <span className="account-next-step__icon">
+                <NextStepIcon aria-hidden="true" className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="account-section-label">YOUR NEXT STEP</p>
+                <h2
+                  id="dashboard-next-step-title"
+                  className="mt-1 truncate text-sm font-bold text-foreground"
+                >
+                  {nextStep.title}
+                </h2>
+                <p className="mt-1 truncate text-xs text-muted">
+                  {nextStep.detail}
+                  {nextStep.requestStatus &&
+                    nextStep.kind !== "request" &&
+                    ` · ${statusLabels[nextStep.requestStatus]}`}
+                </p>
+              </div>
+              <span className="account-next-step__status">
+                {nextStep.status}
+              </span>
+              <Link
+                href={nextStep.href}
+                className="account-next-step__action"
+              >
+                {nextStep.label}
+                <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+              </Link>
+            </section>
+          )}
+
+          {/* Requests and attention */}
+          <div className="grid gap-4 xl:grid-cols-[1.25fr_.75fr]">
+            <section className="account-panel account-recent-requests-panel min-w-0">
+              <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/70">
-                    Your journeys
-                  </p>
-                  <h2 className="mt-2 text-lg font-semibold text-white">
+                  <p className="account-section-label">YOUR JOURNEYS</p>
+                  <h2 className="mt-1 text-lg font-bold text-foreground">
                     Recent requests
                   </h2>
                 </div>
+
                 <Link
                   href="/account/requests"
-                  className="text-xs font-medium text-cyan-200 transition hover:text-white"
+                  className="account-text-link"
                 >
-                  View all <span aria-hidden="true">→</span>
+                  View all
+                  <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
                 </Link>
               </div>
 
-              {data?.requests.length ? (
-                <div className="mt-6 space-y-4">
-                  {data.requests.slice(0, 4).map((request) => {
-                    const stage = requestStages.indexOf(request.status);
-                    const location = getDestinationLabel(
+              {recentRequests.length > 0 ? (
+                <div className="account-recent-request-grid mt-4">
+                  {recentRequests.map((request, index) => {
+                    const destination = getDestinationLabel(
                       request.destination_city,
                       request.destination_country,
                     );
+
                     return (
-                      <Link
+                      <article
                         key={request.id}
-                        href={`/account/requests/${request.id}`}
-                        className="group block rounded-xl border border-white/[0.06] bg-white/[0.018] p-4 transition hover:border-cyan-200/15 hover:bg-white/[0.035] sm:p-5"
+                        className="account-recent-request-card group"
                       >
-                        <div className="flex flex-wrap items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-medium text-white group-hover:text-cyan-100">
-                              {location}
-                            </p>
-                            <p className="mt-1.5 text-[11px] text-slate-500">
-                              {request.id.slice(0, 8).toUpperCase()} ·{" "}
-                              {new Date(request.created_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <span className="rounded-full border border-white/[0.08] bg-white/[0.035] px-2.5 py-1 text-[10px] font-medium text-slate-300">
-                            {stageLabels[request.status]}
-                          </span>
-                        </div>
-                        <div
-                          className="mt-5 flex items-center"
-                          aria-label={`Journey progress: ${stage < 0 ? "status update pending" : `${stage + 1} of ${requestStages.length} steps`}`}
+                        <DestinationCover
+                          city={request.destination_city}
+                          country={request.destination_country}
+                          variation={index}
+                        />
+                        <Link
+                          href={`/account/requests/${request.id}`}
+                          className="account-recent-request-card__link"
+                          aria-label={`View ${destination} request: ${statusLabels[request.status]}, created ${formatDate(request.created_at)}`}
                         >
-                          {requestStages.map((step, stepIndex) => {
-                            const complete =
-                              stage >= 0 && stepIndex <= stage;
-                            return (
-                              <div
-                                key={step}
-                                className="flex min-w-0 flex-1 items-center last:flex-none"
-                              >
-                                <span
-                                  className={`h-1.5 w-1.5 shrink-0 rounded-full transition-colors ${complete ? "bg-cyan-200" : "bg-white/15"}`}
-                                />
-                                {stepIndex < requestStages.length - 1 && (
-                                  <span
-                                    className={`h-px flex-1 ${stage > stepIndex ? "bg-cyan-200/45" : "bg-white/[0.08]"}`}
-                                  />
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </Link>
+                          <span className="account-recent-request-card__status">
+                            {statusLabels[request.status]}
+                          </span>
+                          <span className="account-recent-request-card__bottom">
+                            <span className="account-recent-request-card__destination">
+                              {destination}
+                            </span>
+                            <ArrowUpRight
+                              aria-hidden="true"
+                              className="account-recent-request-card__arrow"
+                            />
+                          </span>
+                          <span className="account-recent-request-card__date">
+                            <CalendarDays aria-hidden="true" />
+                            <span>Created</span>
+                            <time dateTime={request.created_at}>
+                              {formatDate(request.created_at)}
+                            </time>
+                          </span>
+                        </Link>
+                      </article>
                     );
                   })}
                 </div>
               ) : (
-                <div className="mt-6 rounded-xl border border-dashed border-white/[0.09] px-5 py-9 text-center">
-                  <p className="text-sm font-medium text-slate-200">
-                    Your first journey starts here
-                  </p>
-                  <p className="mx-auto mt-2 max-w-sm text-xs leading-5 text-slate-500">
-                    Tell us where you&apos;re going and what kind of travel
-                    assistance you need.
-                  </p>
-                  <Link
-                    href="/request"
-                    className="mt-5 inline-flex rounded-lg bg-cyan-200 px-4 py-2.5 text-xs font-semibold text-slate-950 transition hover:bg-cyan-100"
-                  >
-                    Create a request
-                  </Link>
-                </div>
-              )}
+                <div className="account-empty-state mt-5">
+                  <span className="account-empty-state__emoji" aria-hidden="true">
+                    🧳
+                  </span>
 
-              {data?.requests.length ? (
-                <div className="mt-5 border-t border-white/[0.06] pt-4">
-                  <Link
-                    href="/account/saved"
-                    className="text-xs text-slate-500 transition hover:text-cyan-200"
-                  >
-                    Revisit your saved destinations <span aria-hidden="true">→</span>
-                  </Link>
-                </div>
-              ) : null}
-            </section>
+                  <h3 className="mt-3 text-sm font-bold text-foreground">
+                    {nextStep
+                      ? "Your priority action is ready above"
+                      : "Your next journey starts here"}
+                  </h3>
 
-            <div className="space-y-6">
-              <section className="rounded-2xl border border-white/[0.075] bg-[#0c131d] p-5 sm:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200/70">
-                      Next steps
-                    </p>
-                    <h2 className="mt-2 text-lg font-semibold text-white">
-                      Needs your attention
-                    </h2>
-                  </div>
-                  <Link
-                    href="/account/notifications"
-                    aria-label={`${data?.unreadNotifications ?? 0} unread notifications`}
-                    className="grid h-9 min-w-9 place-items-center rounded-full border border-cyan-200/10 bg-cyan-200/[0.07] px-2 text-xs font-semibold text-cyan-100"
-                  >
-                    {data?.unreadNotifications ?? 0}
-                  </Link>
-                </div>
-                <div className="mt-5 space-y-3">
-                  {allDocuments
-                    .filter(
-                      (document) =>
-                        document.required &&
-                        ["required", "rejected", "expired"].includes(
-                          document.status,
-                        ),
-                    )
-                    .slice(0, 2)
-                    .map((document) => (
-                      <Link
-                        key={document.id}
-                        href={`/account/requests/${document.requestId}`}
-                        className="flex items-start gap-3 rounded-xl border border-white/[0.055] p-3.5 transition hover:bg-white/[0.035]"
-                      >
-                        <span className="mt-0.5 h-2 w-2 rounded-full bg-amber-300" />
-                        <span className="min-w-0">
-                          <span className="block text-xs font-medium text-slate-200">
-                            {document.status === "rejected"
-                              ? "Document update requested"
-                              : document.status === "expired"
-                                ? "Document expired"
-                                : "Document required"}
-                          </span>
-                          <span className="mt-1 block truncate text-[11px] text-slate-500">
-                            {document.document_type} · {document.destination}
-                          </span>
-                        </span>
-                      </Link>
-                    ))}
-                  {allQuotes
-                    .filter((quote) => quote.status === "sent")
-                    .slice(0, 2)
-                    .map((quote) => (
-                      <Link
-                        key={quote.id}
-                        href="/account/quotes"
-                        className="flex items-start gap-3 rounded-xl border border-white/[0.055] p-3.5 transition hover:bg-white/[0.035]"
-                      >
-                        <span className="mt-0.5 h-2 w-2 rounded-full bg-cyan-200" />
-                        <span className="min-w-0">
-                          <span className="block text-xs font-medium text-slate-200">
-                            Quote ready to review
-                          </span>
-                          <span className="mt-1 block text-[11px] text-slate-500">
-                            {quote.quote_number} · {quote.currency}{" "}
-                            {Number(quote.total_amount).toLocaleString()}
-                          </span>
-                        </span>
-                      </Link>
-                    ))}
-                  {!pendingActions && (
-                    <p className="rounded-xl border border-white/[0.055] px-4 py-5 text-center text-xs text-slate-500">
-                      You&apos;re all caught up. We&apos;ll let you know when
-                      there&apos;s a new step.
-                    </p>
+                  <p className="mt-2 max-w-md text-xs leading-6 text-muted">
+                    {nextStep
+                      ? "We have highlighted the most important update for your travel request."
+                      : "Tell us where you want to go and what kind of assistance you need. We'll help you figure out the next steps."}
+                  </p>
+
+                  {!nextStep && (
+                    <Link href="/request" className="account-primary-action mt-4">
+                      Start a request
+                      <ArrowRight aria-hidden="true" className="h-4 w-4" />
+                    </Link>
                   )}
                 </div>
-              </section>
+              )}
+            </section>
 
-              <section className="rounded-2xl border border-white/[0.075] bg-[#0c131d] p-5 sm:p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200/70">
-                      On the horizon
-                    </p>
-                    <h2 className="mt-2 text-lg font-semibold text-white">
-                      Upcoming trips
-                    </h2>
-                  </div>
-                  <Link
-                    href="/account/trips"
-                    className="text-xs text-slate-500 transition hover:text-cyan-200"
-                  >
-                    All trips
-                  </Link>
+            {/* Needs your attention */}
+            <section className="account-panel min-w-0">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="account-section-label account-section-label--amber">
+                    NEXT STEPS
+                  </p>
+
+                  <h2 className="mt-1 text-lg font-bold text-foreground">
+                    Needs your attention
+                  </h2>
                 </div>
-                {upcomingJourneys.length ? (
-                  <div className="mt-5 space-y-3">
-                    {upcomingJourneys.slice(0, 2).map((journey) => (
-                      <Link
-                        key={journey.id}
-                        href={`/account/requests/${journey.request_id}`}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.055] bg-white/[0.018] p-4 transition hover:border-emerald-200/15"
-                      >
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium text-white">
-                            {getDestinationLabel(
-                              journey.destination_city,
-                              journey.destination_country,
-                              "International journey",
-                            )}
-                          </span>
-                          <span className="mt-1 block text-[11px] text-slate-500">
-                            {formatDate(journey.start_date)}
-                            {journey.end_date
-                              ? ` – ${formatDate(journey.end_date)}`
-                              : ""}
-                          </span>
-                        </span>
-                        <span className="shrink-0 text-xs text-emerald-200">
-                          View <span aria-hidden="true">↗</span>
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-5 rounded-xl border border-dashed border-white/[0.08] px-4 py-6 text-center">
-                    <p className="text-xs text-slate-500">
-                      Confirmed travel dates will appear here.
-                    </p>
-                    <Link
-                      href="/planner"
-                      className="mt-3 inline-block text-xs font-medium text-cyan-200 hover:text-white"
-                    >
-                      Explore trip planning
-                    </Link>
-                  </div>
+
+                {data.unreadNotifications > 0 && (
+                  <Link
+                    href="/account/notifications"
+                    className="account-notification-pill"
+                  >
+                    <Bell aria-hidden="true" className="h-3.5 w-3.5" />
+                    {data.unreadNotifications} new
+                  </Link>
                 )}
-              </section>
-            </div>
+              </div>
+
+              <div className="mt-5 space-y-2.5">
+                {remainingDocuments.slice(0, 3).map((document) => (
+                  <Link
+                    key={document.id}
+                    href={`/account/requests/${document.requestId}`}
+                    className="account-attention-item account-attention-item--amber"
+                  >
+                    <span className="account-attention-item__icon">
+                      <FileText aria-hidden="true" className="h-4 w-4" />
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-bold text-foreground">
+                        {document.status === "rejected"
+                          ? "Update a document"
+                          : document.status === "expired"
+                            ? "Replace an expired document"
+                            : "Send a requested document"}
+                      </span>
+
+                      <span className="mt-1 block truncate text-[11px] text-muted">
+                        {document.document_type} · {document.destination}
+                      </span>
+                    </span>
+
+                    <ArrowRight
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0 text-muted"
+                    />
+                  </Link>
+                ))}
+
+                {remainingQuotes.slice(0, 2).map((quote) => (
+                  <Link
+                    key={quote.id}
+                    href="/account/quotes"
+                    className="account-attention-item account-attention-item--sky"
+                  >
+                    <span className="account-attention-item__icon">
+                      <FileText aria-hidden="true" className="h-4 w-4" />
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-xs font-bold text-foreground">
+                        Review your quote
+                      </span>
+
+                      <span className="mt-1 block truncate text-[11px] text-muted">
+                        {quote.quote_number} · {quote.currency}{" "}
+                        {Number(quote.total_amount).toLocaleString()}
+                      </span>
+                    </span>
+
+                    <ArrowRight
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0 text-muted"
+                    />
+                  </Link>
+                ))}
+
+                {remainingDocuments.length === 0 &&
+                  remainingQuotes.length === 0 && (
+                    <div className="account-all-caught-up">
+                      <span className="account-all-caught-up__icon">
+                        <Check aria-hidden="true" className="h-5 w-5" />
+                      </span>
+
+                      <div>
+                        <p className="text-sm font-bold text-emerald-800 dark:text-emerald-200">
+                          You&apos;re all caught up!
+                        </p>
+
+                        <p className="mt-1 text-xs leading-5 text-muted">
+                          No other documents or quotes need your attention right now.
+                        </p>
+                      </div>
+
+                      <span aria-hidden="true" className="ml-auto text-xl">
+                        🎉
+                      </span>
+                    </div>
+                  )}
+
+                <Link
+                  href="/account/notifications"
+                  className="account-text-link mt-2"
+                >
+                  View notifications
+                  <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </section>
           </div>
 
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Link
-              href="/explore"
-              className="group rounded-xl border border-white/[0.07] bg-white/[0.018] p-4 transition hover:border-cyan-200/15 hover:bg-white/[0.035]"
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Discover
-              </span>
-              <span className="mt-2 flex items-center justify-between text-sm font-medium text-slate-200">
-                Explore destinations
-                <span className="text-slate-500 transition group-hover:translate-x-1 group-hover:text-cyan-200">
-                  →
-                </span>
-              </span>
-            </Link>
-            <Link
-              href="/account/bookings"
-              className="group rounded-xl border border-white/[0.07] bg-white/[0.018] p-4 transition hover:border-cyan-200/15 hover:bg-white/[0.035]"
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Confirmations
-              </span>
-              <span className="mt-2 flex items-center justify-between text-sm font-medium text-slate-200">
-                Review bookings
-                <span className="text-slate-500 transition group-hover:translate-x-1 group-hover:text-cyan-200">
-                  →
-                </span>
-              </span>
-            </Link>
-            <Link
-              href="/account/profile"
-              className="group rounded-xl border border-white/[0.07] bg-white/[0.018] p-4 transition hover:border-cyan-200/15 hover:bg-white/[0.035]"
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Your details
-              </span>
-              <span className="mt-2 flex items-center justify-between text-sm font-medium text-slate-200">
-                Review travel profile
-                <span className="text-slate-500 transition group-hover:translate-x-1 group-hover:text-cyan-200">
-                  →
-                </span>
-              </span>
-            </Link>
-            <Link
-              href="/account/saved"
-              className="group rounded-xl border border-white/[0.07] bg-white/[0.018] p-4 transition hover:border-cyan-200/15 hover:bg-white/[0.035]"
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
-                Your collection
-              </span>
-              <span className="mt-2 flex items-center justify-between text-sm font-medium text-slate-200">
-                Saved destinations
-                <span className="text-slate-500 transition group-hover:translate-x-1 group-hover:text-cyan-200">
-                  →
-                </span>
-              </span>
-            </Link>
-          </section>
+          {/* Upcoming journeys */}
+          {upcomingJourneys.length > 0 && (
+            <section className="account-upcoming-panel">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="account-section-label account-section-label--mint">
+                    COMING UP
+                  </p>
+
+                  <h2 className="mt-1 text-lg font-bold text-foreground">
+                    Your upcoming journeys
+                  </h2>
+                </div>
+
+                <Link href="/account/trips" className="account-text-link">
+                  All trips
+                  <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {upcomingJourneys.slice(0, 2).map((journey) => (
+                  <Link
+                    key={journey.id}
+                    href={`/account/requests/${journey.request_id}`}
+                    className="account-upcoming-item group"
+                  >
+                    <span className="account-upcoming-item__icon">
+                      <Plane
+                        aria-hidden="true"
+                        className="h-5 w-5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                      />
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-foreground">
+                        {getDestinationLabel(
+                          journey.destination_city,
+                          journey.destination_country,
+                          "International journey",
+                        )}
+                      </span>
+
+                      <span className="mt-1 block text-[11px] text-muted">
+                        {formatDate(journey.start_date)}
+                        {journey.end_date
+                          ? ` – ${formatDate(journey.end_date)}`
+                          : ""}
+                      </span>
+                    </span>
+
+                    <ChevronRight
+                      aria-hidden="true"
+                      className="h-4 w-4 shrink-0 text-muted transition-transform group-hover:translate-x-1 group-hover:text-primary"
+                    />
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
         </>
       ) : null}
     </main>

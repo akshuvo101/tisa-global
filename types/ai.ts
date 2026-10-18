@@ -151,6 +151,61 @@ export type AIRequest = {
   }[];
 };
 
+export type WebSearchResult = {
+  title: string;
+  url: string;
+  content: string;
+  score: number | null;
+  publishedDate: string | null;
+  sourceUrl: string;
+  sourceName: string;
+  verificationStatus:
+    | "official_source"
+    | "partially_verified"
+    | "unverified";
+  sourceClassification: "government_or_education_domain" | "other";
+  sourceRole: "primary_source_candidate" | "discovery_source";
+  lastCheckedAt: string;
+  deadline: string | null;
+  deadlineStatus: "future" | "past" | "unknown";
+  applicationUrl: string | null;
+  eligibility: string | null;
+  eventDate: string | null;
+  eventDateStatus: "upcoming" | "concluded" | "unknown";
+  registration: string | null;
+  fundingDetails: string | null;
+  eligibleCountries: string | null;
+  academicLevel: string | null;
+  subjectEligibility: string | null;
+  fundingAmount: string | null;
+  fundingCoverage: string | null;
+  tuitionCost: string | null;
+  livingCost: string | null;
+  visaFinancialRequirement: string | null;
+  paperRequirements: string | null;
+  opportunityType:
+    | "undergraduate_scholarship"
+    | "university_tuition_waiver"
+    | "tuition_discount"
+    | "graduate_funding"
+    | "conference_travel_grant"
+    | "gender_restricted"
+    | "institution_restricted"
+    | "tuition_policy"
+    | "student_loan"
+    | "other_funding";
+  status:
+    | "open"
+    | "upcoming"
+    | "closed"
+    | "not_applicable"
+    | "eligibility_restricted"
+    | "status_unconfirmed";
+  statusReason: string;
+  relevance: "priority" | "related" | "other";
+  targetFit: "confirmed" | "unconfirmed" | "restricted";
+};
+
 /* -------------------------------------------------------------------------- */
 /* AI response                                                                */
 /* -------------------------------------------------------------------------- */
@@ -235,6 +290,11 @@ export type AIResponse = {
     sourceName: string | null;
     reason: string;
   }[];
+
+  webResults?: (WebSearchResult & {
+    category: "conference" | "funding";
+  })[];
+  fundingSearchPerformed?: boolean;
 
   nextActions: string[];
 };

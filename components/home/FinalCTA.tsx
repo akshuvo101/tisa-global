@@ -1,120 +1,213 @@
-
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowRight,
   ArrowUpRight,
+  CalendarDays,
+  CheckCircle2,
   Compass,
+  FileText,
   Globe2,
-  MoveUpRight,
+  PlaneTakeoff,
   Sparkles,
 } from "lucide-react";
+
+const journeySteps = [
+  {
+    number: "01",
+    title: "Discover",
+    description:
+      "Find a conference, destination, service, or travel opportunity that matches your plans.",
+    action: "Explore your options",
+    icon: Compass,
+    accent: "teal",
+    image:
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=78",
+    imageAlt: "Traveler looking across a mountain landscape",
+  },
+  {
+    number: "02",
+    title: "Tell TISA",
+    description:
+      "Share your destination, travel dates, deadlines, and the services you need.",
+    action: "Submit your request",
+    icon: FileText,
+    accent: "blue",
+    image:
+      "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=900&q=78",
+    imageAlt: "Travel documents being reviewed on a desk",
+  },
+  {
+    number: "03",
+    title: "We Review",
+    description:
+      "Our team reviews your requirements, explains the next steps, and requests documents when needed.",
+    action: "Review & coordination",
+    icon: CheckCircle2,
+    accent: "violet",
+    image:
+      "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=900&q=78",
+    imageAlt: "Team reviewing details together on a laptop",
+  },
+  {
+    number: "04",
+    title: "Travel with Confidence",
+    description:
+      "Once you approve the quote, we coordinate the agreed services to help prepare for your journey.",
+    action: "Prepare for departure",
+    icon: PlaneTakeoff,
+    accent: "amber",
+    image:
+      "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=78",
+    imageAlt: "Airplane wing above the clouds",
+  },
+];
 
 export default function FinalCTA() {
   return (
     <section
-      className="home-section relative isolate overflow-hidden border-t border-border"
+      className="home-final-cta relative isolate overflow-hidden border-t border-border"
       aria-labelledby="final-cta-title"
     >
-      <div className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
-        <div className="relative overflow-hidden rounded-[2rem] border border-border/80 bg-surface-light/85 shadow-2xl shadow-black/[0.08] backdrop-blur-sm sm:rounded-[2.5rem]">
-          {/* Ambient lighting */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 overflow-hidden"
-          >
-            <div className="absolute -left-28 -top-36 h-80 w-80 rounded-full bg-primary/10 blur-[100px]" />
-            <div className="absolute -bottom-40 -right-20 h-96 w-96 rounded-full bg-secondary/10 blur-[110px]" />
+      <div aria-hidden="true" className="home-final-cta__scrim absolute inset-0" />
+      <div
+        aria-hidden="true"
+        className="home-final-cta__flight-path pointer-events-none absolute"
+      >
+        <span className="home-final-cta__flight-plane">
+          <PlaneTakeoff className="h-7 w-7" />
+        </span>
+      </div>
 
-            <div className="absolute right-0 top-0 hidden h-full w-[42%] lg:block">
-              <div className="absolute right-12 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full border border-primary/10" />
-              <div className="absolute right-24 top-1/2 h-52 w-52 -translate-y-1/2 rounded-full border border-primary/10" />
-              <div className="absolute right-36 top-1/2 h-32 w-32 -translate-y-1/2 rounded-full border border-primary/10" />
-              <div className="absolute right-[8.5rem] top-1/2 flex h-16 w-16 -translate-y-1/2 items-center justify-center rounded-2xl border border-primary/20 bg-primary-soft/80 text-primary shadow-xl shadow-primary/10">
-                <Globe2 size={28} strokeWidth={1.5} />
-              </div>
-            </div>
+      <div
+        data-theme-contrast="dark"
+        className="relative z-10 mx-auto max-w-7xl px-5 py-16 text-white sm:px-8 sm:py-20 lg:px-10 lg:py-24"
+      >
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="inline-flex items-center gap-2 rounded-full border border-teal-200/20 bg-slate-950/35 px-4 py-2 text-[11px] font-semibold tracking-[0.12em] text-white/85 shadow-sm backdrop-blur-md sm:text-xs">
+            <Sparkles aria-hidden="true" className="h-4 w-4 text-teal-200" />
+            HOW YOUR TISA JOURNEY WORKS
           </div>
 
-          {/* Content */}
-          <div className="relative z-10 px-6 py-14 sm:px-10 sm:py-16 lg:px-16 lg:py-20">
-            <div className="max-w-3xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary-soft/80 px-4 py-2 text-xs font-semibold tracking-wide text-primary">
-                <Sparkles size={14} aria-hidden="true" />
-                YOUR JOURNEY, YOUR WAY
-              </div>
+          <h2
+            id="final-cta-title"
+            className="mt-5 text-[clamp(2rem,4.6vw,3.7rem)] font-semibold leading-[1.08] tracking-[-0.05em]"
+          >
+            From your first idea
+            <span className="home-final-cta__title-accent block">
+              to your next destination.
+            </span>
+          </h2>
 
-              <h2
-                id="final-cta-title"
-                className="mt-7 text-4xl font-semibold leading-[1.12] tracking-[-0.04em] text-foreground sm:text-5xl lg:text-6xl"
-              >
-                Wherever life takes you,
-                <span className="mt-2 block text-primary">
-                  let&apos;s plan the way.
-                </span>
-              </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-white/75 sm:text-base sm:leading-7">
+            International travel has many moving parts. Tell us what you need,
+            and we will help you understand and coordinate the next steps.
+          </p>
+        </div>
 
-              <p className="mt-6 max-w-2xl text-sm leading-7 text-muted sm:text-base sm:leading-8">
-                From international conferences and visa guidance to flights
-                and personalized travel support, tell us what you need.
-                We&apos;ll review your request and help you understand the
-                next steps.
-              </p>
+        <ol
+          aria-label="How your journey with TISA works"
+          className="home-final-cta__steps relative mt-9 grid list-none grid-cols-1 gap-4 p-0 sm:mt-11 sm:grid-cols-2 lg:mt-12 lg:grid-cols-4 lg:gap-5"
+        >
+          {journeySteps.map(({ icon: Icon, ...step }, index) => (
+            <li
+              key={step.number}
+              className={`home-final-cta__step home-final-cta__step--${step.accent} group relative flex min-h-[330px] flex-col overflow-hidden rounded-[1.35rem] border p-4 shadow-[0_18px_42px_rgba(0,0,0,0.25)] transition-[transform,border-color,box-shadow] duration-250 sm:p-5`}
+              style={{ animationDelay: `${index * 75}ms` }}
+            >
+              <Image
+                src={step.image}
+                alt={step.imageAlt}
+                fill
+                sizes="(max-width: 639px) calc(100vw - 40px), (max-width: 1023px) calc(50vw - 32px), 280px"
+                quality={75}
+                className="home-final-cta__step-image object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04] motion-reduce:transform-none motion-reduce:transition-none"
+              />
+              <div aria-hidden="true" className="home-final-cta__step-shade absolute inset-0" />
+              <div aria-hidden="true" className="home-final-cta__step-art absolute inset-0" />
+              <div aria-hidden="true" className="home-final-cta__step-contour absolute inset-0" />
 
-              <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <Link
-                  href="/request"
-                  className="home-primary-action group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5"
-                >
-                  Start a Travel Request
-                  <ArrowRight
-                    size={17}
-                    aria-hidden="true"
-                    className="transition-transform duration-300 group-hover:translate-x-1"
-                  />
-                </Link>
-
-                <Link
-                  href="/events"
-                  className="home-secondary-action group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-border bg-surface/70 px-6 py-3 text-sm font-semibold text-foreground transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40"
-                >
-                  <Compass size={16} aria-hidden="true" />
-                  Explore Conferences
-                  <MoveUpRight
-                    size={15}
-                    aria-hidden="true"
-                    className="text-muted transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                  />
-                </Link>
-              </div>
-
-              {/* Closing note */}
-              <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-3 text-xs text-muted">
-                <span className="inline-flex items-center gap-2">
+              <div className="home-final-cta__step-content relative z-10 flex flex-1 flex-col">
+                <div className="flex items-center justify-between">
+                  <span className="home-final-cta__step-icon grid h-11 w-11 place-items-center rounded-full border shadow-[0_0_18px_currentColor] transition-transform duration-250 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none">
+                    <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
+                  </span>
                   <span
                     aria-hidden="true"
-                    className="h-1.5 w-1.5 rounded-full bg-secondary"
-                  />
-                  Tell us what you need
-                </span>
+                    className="home-final-cta__step-number text-sm font-semibold tabular-nums tracking-wide"
+                  >
+                    {step.number}
+                  </span>
+                </div>
 
-                <span className="hidden h-3 w-px bg-border sm:block" />
+                <h3 className="mt-3 text-lg font-semibold tracking-tight text-white sm:text-xl">
+                  {step.title}
+                </h3>
+                <p className="mt-2 flex-1 text-[13px] leading-[1.65] text-white/80">
+                  {step.description}
+                </p>
 
-                <span className="inline-flex items-center gap-2">
-                  <Globe2 size={14} aria-hidden="true" />
-                  International travel support
-                </span>
+                <div className="home-final-cta__step-action mt-4 flex min-h-9 items-center justify-between gap-2 border-t pt-3">
+                  <span className="text-xs font-medium leading-5 text-white/90">
+                    {step.action}
+                  </span>
+                  {index < journeySteps.length - 1 ? (
+                    <ArrowRight
+                      aria-hidden="true"
+                      className="home-final-cta__step-arrow h-4 w-4 shrink-0 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
+                    />
+                  ) : (
+                    <CheckCircle2
+                      aria-hidden="true"
+                      className="home-final-cta__step-arrow h-4 w-4 shrink-0"
+                    />
+                  )}
+                </div>
               </div>
-            </div>
+            </li>
+          ))}
+        </ol>
 
-            {/* Corner detail */}
-            <div
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:mt-9 sm:flex-row sm:flex-wrap">
+          <Link
+            href="/request"
+            className="home-primary-action group inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary motion-reduce:transform-none motion-reduce:transition-none"
+          >
+            Start a Travel Request
+            <ArrowRight
+              size={17}
               aria-hidden="true"
-              className="absolute bottom-7 right-8 hidden items-center gap-2 text-xs font-medium tracking-wide text-muted/70 xl:flex"
-            >
-              TISA GLOBAL
-              <ArrowUpRight size={14} />
-            </div>
-          </div>
+              className="transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
+            />
+          </Link>
+
+          <Link
+            href="/events"
+            className="home-secondary-action group inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/25 px-6 py-3 text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary motion-reduce:transform-none motion-reduce:transition-none"
+          >
+            <CalendarDays size={16} aria-hidden="true" />
+            Explore Conferences
+            <ArrowUpRight
+              size={15}
+              aria-hidden="true"
+              className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transition-none"
+            />
+          </Link>
+        </div>
+
+        <div className="home-final-cta__note mx-auto mt-8 flex max-w-3xl flex-wrap items-center justify-center gap-x-5 gap-y-2 text-center text-xs text-white/70 sm:mt-9 sm:text-sm">
+          <span className="inline-flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 rounded-full bg-emerald-300"
+            />
+            Tell us what you need
+          </span>
+          <span className="hidden h-3 w-px bg-white/20 sm:block" />
+          <span className="inline-flex items-center gap-2">
+            <Globe2 size={14} aria-hidden="true" className="text-teal-200" />
+            International travel support
+          </span>
         </div>
       </div>
     </section>

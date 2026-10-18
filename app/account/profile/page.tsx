@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Check, HeartHandshake, LoaderCircle, MapPinned, Save, UserRound } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -162,7 +163,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background text-foreground">
+      <main className="portal-page min-h-screen bg-background text-foreground">
         <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-6">
           <p className="text-sm text-muted">
             Loading your profile...
@@ -175,10 +176,10 @@ export default function ProfilePage() {
   const email = profile?.email ?? "No email available";
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="portal-page min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-3xl px-6 py-10 lg:px-8">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-7">
           <Link
             href={authProfile?.role === "admin" ? "/admin" : "/account"}
             className="text-sm text-muted transition hover:text-foreground"
@@ -186,21 +187,19 @@ export default function ProfilePage() {
             ← Back to {authProfile?.role === "admin" ? "dashboard" : "account"}
           </Link>
 
-          <p className="mt-8 text-sm font-medium text-primary">
-            Account Settings
-          </p>
-
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">
-            Edit Profile
-          </h1>
-
-          <p className="mt-3 text-sm leading-6 text-muted">
-            Update your personal information used across TISA Global.
-          </p>
+          <div className="mt-7 rounded-[22px] border border-border bg-surface/90 p-5 shadow-[0_14px_36px_rgba(1,9,17,0.12)] sm:p-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">YOUR TRAVEL PROFILE</p>
+            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+              A little about you <span aria-hidden="true">👋</span>
+            </h1>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
+              Keep your details current so the TISA team can coordinate your travel more smoothly.
+            </p>
+          </div>
         </div>
 
         {/* Profile card */}
-        <section className="rounded-2xl border border-white/8 bg-surface p-6 sm:p-8">
+        <section className="rounded-[22px] border border-border bg-surface/90 p-4 shadow-[0_12px_34px_rgba(1,9,17,0.12)] sm:p-6 lg:p-8">
           {/* Avatar */}
           <div className="mb-8 flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-primary-soft text-xl font-semibold text-primary">
@@ -223,9 +222,7 @@ export default function ProfilePage() {
                 {profile?.full_name || "Traveler"}
               </p>
 
-              <p className="mt-1 text-sm text-muted">
-                Profile photo support will be added later.
-              </p>
+              <p className="mt-1 text-xs text-muted">Your profile details are used to support your requests.</p>
             </div>
           </div>
 
@@ -233,8 +230,9 @@ export default function ProfilePage() {
           {error && (
             <div
               role="alert"
-              className="mb-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+              className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300"
             >
+              <span aria-hidden="true">!</span>
               {error}
             </div>
           )}
@@ -242,13 +240,19 @@ export default function ProfilePage() {
           {success && (
             <div
               role="status"
-              className="mb-5 rounded-xl border border-secondary/20 bg-secondary-soft px-4 py-3 text-sm text-secondary"
+              className="mb-5 flex items-center gap-2 rounded-xl border border-secondary/20 bg-secondary-soft px-4 py-3 text-sm text-secondary"
             >
+              <Check aria-hidden="true" className="h-4 w-4" />
               {success}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <section className="space-y-5 rounded-2xl border border-border bg-background/30 p-4 sm:p-5">
+              <div className="mb-4 flex items-center gap-2.5">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary"><UserRound aria-hidden="true" className="h-4 w-4" /></span>
+                <div><h2 className="text-sm font-semibold">Personal details</h2><p className="mt-0.5 text-[11px] text-muted">Your name and best way to reach you</p></div>
+              </div>
             {/* Full name */}
             <div>
               <label
@@ -288,10 +292,14 @@ export default function ProfilePage() {
                 <input id="city" type="text" value={city} onChange={(event) => setCity(event.target.value)} autoComplete="address-level2" disabled={saving} className="w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10" />
               </div>
             </div>
+            </section>
 
-            <div className="rounded-2xl border border-white/8 bg-background/40 p-5">
-              <p className="text-sm font-semibold">Travel readiness</p>
-              <p className="mt-1 text-xs leading-5 text-muted">Store basic travel details so TISA can coordinate your journey. Do not upload passport scans here; those belong in the request document workspace.</p>
+            <section className="rounded-2xl border border-border bg-background/30 p-4 sm:p-5">
+              <div className="mb-4 flex items-center gap-2.5">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400/10 text-emerald-700 dark:text-emerald-200"><MapPinned aria-hidden="true" className="h-4 w-4" /></span>
+                <div><h2 className="text-sm font-semibold">Travel readiness</h2><p className="mt-0.5 text-[11px] text-muted">Helpful details for travel coordination</p></div>
+              </div>
+              <p className="mb-4 rounded-xl border border-amber-400/15 bg-amber-400/[0.06] px-3 py-2.5 text-xs leading-5 text-muted">Do not upload passport scans here; sensitive travel documents belong in the secure request document workspace.</p>
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 <div>
                   <label htmlFor="passportExpiry" className="mb-2 block text-sm font-medium">Passport expiry</label>
@@ -304,15 +312,18 @@ export default function ProfilePage() {
                   </select>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div className="rounded-2xl border border-white/8 bg-background/40 p-5">
-              <p className="text-sm font-semibold">Emergency contact</p>
+            <section className="rounded-2xl border border-border bg-background/30 p-4 sm:p-5">
+              <div className="mb-4 flex items-center gap-2.5">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-rose-400/10 text-rose-700 dark:text-rose-200"><HeartHandshake aria-hidden="true" className="h-4 w-4" /></span>
+                <div><h2 className="text-sm font-semibold">Emergency contact</h2><p className="mt-0.5 text-[11px] text-muted">Optional contact in case it is needed</p></div>
+              </div>
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 <div><label htmlFor="emergencyName" className="mb-2 block text-sm font-medium">Name</label><input id="emergencyName" type="text" value={emergencyName} onChange={(event) => setEmergencyName(event.target.value)} disabled={saving} className="w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10" /></div>
                 <div><label htmlFor="emergencyPhone" className="mb-2 block text-sm font-medium">Phone</label><input id="emergencyPhone" type="tel" value={emergencyPhone} onChange={(event) => setEmergencyPhone(event.target.value)} disabled={saving} className="w-full rounded-xl border border-white/10 bg-background px-4 py-3 text-sm outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10" /></div>
               </div>
-            </div>
+            </section>
 
             {/* Email */}
             <div>
@@ -349,9 +360,9 @@ export default function ProfilePage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-background transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-slate-950 shadow-[0_8px_18px_rgba(89,217,232,0.15)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transform-none"
               >
-                {saving ? "Saving changes..." : "Save Changes"}
+                {saving ? <><LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />Saving changes...</> : <><Save aria-hidden="true" className="h-4 w-4" />Save changes</>}
               </button>
             </div>
           </form>

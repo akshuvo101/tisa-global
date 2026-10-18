@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Bell, BellRing, CalendarCheck2, FileCheck2, MessageCircle, Quote, type LucideIcon } from "lucide-react";
+import PortalPageHeader from "@/components/account/PortalPageHeader";
 
 type Notification = {
   id: string;
@@ -42,6 +44,10 @@ export default function NotificationsPage() {
   const [preferences, setPreferences] = useState<Preference[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<"all" | "unread">("all");
+  const unreadCount = items.filter((item) => !item.read).length;
+  const visibleItems =
+    filter === "unread" ? items.filter((item) => !item.read) : items;
 
   useEffect(() => {
     let active = true;
@@ -169,29 +175,44 @@ export default function NotificationsPage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl">
-      <section className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-[0.2em] text-sky-400">
-            Your updates
-          </p>
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Stay up to date
-          </h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-400">
-            Updates from the TISA team about your requests, documents, and
-            quotes.
-          </p>
+    <main className="portal-page mx-auto max-w-4xl">
+      <PortalPageHeader
+        eyebrow="YOUR UPDATES"
+        title="Stay up to date"
+        description="Updates from the TISA team about your requests, documents, and quotes."
+      >
+        <span className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl border border-primary/20 bg-primary-soft px-3.5 text-xs font-semibold text-primary">
+          <BellRing aria-hidden="true" className="h-4 w-4" />
+          {unreadCount} unread
+        </span>
+      </PortalPageHeader>
+
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex gap-2" aria-label="Filter notifications">
+          {(["all", "unread"] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+              className={`inline-flex min-h-9 items-center gap-2 rounded-xl border px-3 text-xs font-medium capitalize transition ${filter === value ? "border-primary/25 bg-primary-soft text-primary" : "border-border bg-surface/70 text-muted hover:text-foreground"}`}
+            >
+              {value === "all" ? "All updates" : "Unread"}
+              <span className="rounded-md bg-background/50 px-1.5 py-0.5 tabular-nums">
+                {value === "all" ? items.length : unreadCount}
+              </span>
+            </button>
+          ))}
         </div>
         <button
           type="button"
           onClick={() => void markAsRead()}
-          disabled={!items.some((item) => !item.read)}
-          className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-white/10 px-4 text-xs font-medium text-slate-300 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={unreadCount === 0}
+          className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface/80 px-4 text-xs font-medium text-foreground transition hover:bg-surface-light disabled:cursor-not-allowed disabled:opacity-40"
         >
           Mark all read
         </button>
-      </section>
+      </div>
 
       {error && (
         <p
@@ -213,63 +234,74 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <div className="mt-8 space-y-3">
-          {items.length ? (
-            items.map((item) => (
+          {visibleItems.length ? (
+            visibleItems.map((item) => (
               <article
                 key={item.id}
-                className={`rounded-2xl border p-5 ${
+                className={`rounded-[20px] border p-4 shadow-[0_8px_24px_rgba(1,9,17,0.1)] transition-colors sm:p-5 ${
                   item.read
-                    ? "border-white/[0.07] bg-white/[0.02]"
-                    : "border-sky-300/20 bg-sky-300/[0.045]"
+                    ? "border-border bg-surface/80"
+                    : "border-primary/25 bg-primary-soft/45"
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${notificationTone(item.type)}`}>
+                    {(() => {
+                      const Icon = notificationIcon(item.type);
+                      return <Icon aria-hidden="true" className="h-[18px] w-[18px]" />;
+                    })()}
+                  </span>
                   <div className="min-w-0">
-                    <p className="font-medium text-white">{item.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-sm font-semibold text-foreground">{item.title}</h2>
+                      <span className="rounded-full border border-border bg-background/40 px-2 py-0.5 text-[10px] capitalize text-muted">{item.type.replaceAll("_", " ")}</span>
+                      {!item.read && <span className="rounded-full bg-primary px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-950">New</span>}
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-muted">
                       {item.message}
                     </p>
-                    <p className="mt-2 text-[11px] text-slate-600">
-                      {new Date(item.created_at).toLocaleString()}
+                    <p className="mt-2 text-[11px] text-muted">
+                      {new Date(item.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
                     </p>
                   </div>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+                  {item.related_request_id ? (
+                    <Link href={`/account/requests/${item.related_request_id}`} className="inline-flex min-h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-primary transition hover:bg-primary-soft">
+                      View request <span aria-hidden="true">→</span>
+                    </Link>
+                  ) : <span />}
                   {!item.read && (
                     <button
                       type="button"
                       onClick={() => void markAsRead(item.id)}
-                      className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-sky-300 transition hover:bg-sky-300/10 hover:text-sky-100"
+                      className="min-h-8 rounded-lg border border-primary/20 px-3 text-xs font-medium text-primary transition hover:bg-primary-soft"
                     >
                       Mark read
                     </button>
                   )}
                 </div>
-                {item.related_request_id && (
-                  <Link
-                    href={`/account/requests/${item.related_request_id}`}
-                    className="mt-4 inline-flex text-xs font-medium text-sky-300 transition hover:text-white"
-                  >
-                    View request <span aria-hidden="true">→</span>
-                  </Link>
-                )}
               </article>
             ))
           ) : (
-            <div className="rounded-2xl border border-dashed border-white/10 px-6 py-10 text-center">
-              <h2 className="text-sm font-medium text-slate-200">
-                No notifications yet
+            <div className="rounded-[20px] border border-dashed border-border bg-surface/50 px-6 py-9 text-center">
+              <span className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-primary-soft text-primary"><Bell aria-hidden="true" className="h-5 w-5" /></span>
+              <h2 className="mt-3 text-sm font-semibold text-foreground">
+                {filter === "unread" ? "You’re all caught up" : "No notifications yet"}
               </h2>
-              <p className="mt-2 text-xs text-slate-500">
-                New updates about your TISA journeys will appear here.
+              <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-muted">
+                {filter === "unread" ? "There are no unread updates. New journey news will appear here." : "New updates about your TISA journeys will appear here."}
               </p>
             </div>
           )}
         </div>
       )}
 
-      <section className="mt-10 rounded-2xl border border-white/[0.07] bg-[#0c131d] p-5 sm:p-6">
-        <h2 className="text-lg font-semibold text-white">
-          Notification preferences
-        </h2>
+      <section className="mt-8 rounded-[20px] border border-border bg-surface/80 p-4 shadow-[0_8px_24px_rgba(1,9,17,0.1)] sm:p-5">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-400/10 text-violet-700 dark:text-violet-200"><Bell aria-hidden="true" className="h-4 w-4" /></span>
+          <div><h2 className="text-base font-semibold text-foreground">Notification preferences</h2><p className="mt-0.5 text-xs text-muted">Choose where optional updates reach you.</p></div>
+        </div>
         <p className="mt-1 text-sm leading-6 text-slate-500">
           Control optional email and WhatsApp updates. In-app notifications
           remain available.
@@ -316,4 +348,19 @@ export default function NotificationsPage() {
       </section>
     </main>
   );
+}
+
+function notificationIcon(type: string): LucideIcon {
+  if (type.includes("message")) return MessageCircle;
+  if (type.includes("document")) return FileCheck2;
+  if (type.includes("quote")) return Quote;
+  if (type.includes("booking") || type.includes("travel")) return CalendarCheck2;
+  return Bell;
+}
+
+function notificationTone(type: string) {
+  if (type.includes("document")) return "bg-amber-400/10 text-amber-700 dark:text-amber-200";
+  if (type.includes("quote")) return "bg-violet-400/10 text-violet-700 dark:text-violet-200";
+  if (type.includes("booking") || type.includes("travel")) return "bg-emerald-400/10 text-emerald-700 dark:text-emerald-200";
+  return "bg-primary-soft text-primary";
 }

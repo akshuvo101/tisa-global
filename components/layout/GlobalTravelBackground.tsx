@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 
 const travelImages = [
   {
-    src: "https://images.unsplash.com/photo-1530789253388-582c481c54b0?auto=format&fit=crop&w=2000&q=78",
+    src: "https://images.unsplash.com/photo-1787946177854-b4f08bef45fb?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=NHwxMjA3fDA%3D",
     alt: "Alpine lake and mountain peaks",
   },
   {

@@ -26,7 +26,6 @@ export default function UserMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [menuPosition, setMenuPosition] = useState({
     top: 0,
     right: 16,
@@ -34,10 +33,6 @@ export default function UserMenu() {
   });
   const [signingOut, setSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const updateMenuPosition = () => {
     const button = buttonRef.current;
@@ -49,7 +44,7 @@ export default function UserMenu() {
     const viewportHeight = window.innerHeight;
 
     const horizontalPadding = 12;
-    const menuWidth = Math.min(256, viewportWidth - horizontalPadding * 2);
+    const menuWidth = Math.min(320, viewportWidth - horizontalPadding * 2);
     const gap = 8;
 
     const spaceBelow = viewportHeight - rect.bottom - gap - 12;
@@ -62,17 +57,22 @@ export default function UserMenu() {
       openAbove ? spaceAbove : spaceBelow
     );
 
+    const right =
+      viewportWidth <= 640
+        ? (viewportWidth - menuWidth) / 2
+        : Math.max(
+            horizontalPadding,
+            Math.min(
+              viewportWidth - rect.right,
+              viewportWidth - menuWidth - horizontalPadding,
+            ),
+          );
+
     setMenuPosition({
       top: openAbove
         ? Math.max(12, rect.top - gap - Math.min(400, availableHeight))
         : rect.bottom + gap,
-      right: Math.max(
-        horizontalPadding,
-        Math.min(
-          viewportWidth - rect.right,
-          viewportWidth - menuWidth - horizontalPadding
-        )
-      ),
+      right,
       maxHeight: Math.min(400, availableHeight),
     });
   };
@@ -160,7 +160,7 @@ export default function UserMenu() {
     return (
       <Link
         href="/login"
-        className="flex h-10 items-center rounded-full px-4 text-sm font-medium text-slate-300 transition-colors hover:text-white"
+        className="site-navbar__user-signin flex h-10 items-center rounded-full px-4 text-sm font-medium transition-colors"
       >
         Sign in
       </Link>
@@ -190,7 +190,7 @@ export default function UserMenu() {
   const isOnDashboard = pathname === dashboardHref;
 
   const dropdown =
-    open && mounted
+    open && typeof document !== "undefined"
       ? createPortal(
         <div
           ref={menuRef}
@@ -200,23 +200,23 @@ export default function UserMenu() {
             position: "fixed",
             top: menuPosition.top,
             right: menuPosition.right,
-            width: "min(16rem, calc(100vw - 1.5rem))",
+            width: "min(20rem, calc(100vw - 1.5rem))",
             maxHeight: menuPosition.maxHeight,
             overflowY: "auto",
             zIndex: 9999,
           }}
-          className="overscroll-contain rounded-2xl border border-white/10 bg-[#0c121d] p-2 shadow-2xl shadow-black/40"
+          className="site-navbar__user-menu overscroll-contain rounded-2xl border border-white/10 p-2 shadow-2xl shadow-black/25"
         >
-          <div className="border-b border-white/[0.07] px-3 py-3">
-            <p className="truncate text-sm font-medium text-white">
+          <div className="site-navbar__user-summary border-b px-3 py-3">
+            <p className="site-navbar__user-name truncate text-sm font-semibold">
               {displayName}
             </p>
-            <p className="mt-0.5 truncate text-xs text-slate-500">
+            <p className="site-navbar__user-email mt-0.5 truncate text-xs">
               {profile?.email || user.email}
             </p>
 
             {error && (
-              <p role="alert" className="mt-2 text-xs text-amber-300">
+              <p role="alert" className="site-navbar__user-error mt-2 text-xs">
                 {error}
               </p>
             )}
@@ -227,7 +227,7 @@ export default function UserMenu() {
               role="menuitem"
               href={isOnDashboard ? "/" : dashboardHref}
               onClick={() => setOpen(false)}
-              className="mt-1 block rounded-xl px-3 py-2.5 text-sm text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+              className="site-navbar__user-menu-item mt-1 block rounded-xl px-3 py-3 text-sm font-medium"
             >
               {isOnDashboard
                 ? "Home"
@@ -242,14 +242,14 @@ export default function UserMenu() {
               role="menuitem"
               href={profileHref}
               onClick={() => setOpen(false)}
-              className="block rounded-xl px-3 py-2.5 text-sm text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+              className="site-navbar__user-menu-item block rounded-xl px-3 py-3 text-sm font-medium"
             >
               Profile settings
             </Link>
           )}
 
           {signOutError && (
-            <p role="alert" className="px-3 py-2 text-xs text-red-300">
+            <p role="alert" className="site-navbar__user-error px-3 py-2 text-xs">
               {signOutError}
             </p>
           )}
@@ -259,7 +259,7 @@ export default function UserMenu() {
             role="menuitem"
             onClick={handleSignOut}
             disabled={signingOut}
-            className="mt-1 w-full rounded-xl px-3 py-2.5 text-left text-sm text-red-300 transition hover:bg-red-400/10 disabled:opacity-60"
+            className="site-navbar__user-menu-item site-navbar__user-menu-item--signout mt-1 w-full rounded-xl px-3 py-3 text-left text-sm font-medium disabled:opacity-60"
           >
             {signingOut ? "Signing out..." : "Log out"}
           </button>
@@ -276,9 +276,9 @@ export default function UserMenu() {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
-        className="flex h-10 max-w-52 items-center gap-2 rounded-full border border-white/10 bg-white/[0.035] px-2.5 text-sm text-white transition hover:border-white/20 hover:bg-white/[0.07]"
+        className="site-navbar__user-trigger flex h-10 max-w-52 items-center gap-2 rounded-full border px-2.5 text-sm transition"
       >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sky-400/15 text-[11px] font-semibold text-sky-200">
+        <span className="site-navbar__user-avatar flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full text-[11px] font-semibold">
           {profile?.avatar_url ? (
             <Image
               src={profile.avatar_url}

@@ -7,6 +7,17 @@ import { useEffect, useState } from "react";
 import type { RequestStatus } from "@/types/tisa";
 import QuoteActions from "@/components/account/QuoteActions";
 import RequestMessageComposer from "@/components/account/RequestMessageComposer";
+import PortalStatusBadge from "@/components/account/PortalStatusBadge";
+import DestinationCover from "@/components/account/DestinationCover";
+import {
+  ArrowLeft,
+  BriefcaseBusiness,
+  CalendarDays,
+  FileText,
+  MapPin,
+  MessageCircle,
+  Plane,
+} from "lucide-react";
 import {
   getDestinationCountryLabel,
   getDestinationLabel,
@@ -97,6 +108,19 @@ function formatStatus(status: string) {
   return status.replaceAll("_", " ");
 }
 
+function formatDate(value: string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function RequestDetailPage() {
   const params = useParams<{ id: string }>();
 
@@ -151,7 +175,7 @@ export default function RequestDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-background text-foreground">
+      <main className="portal-page min-h-screen bg-background text-foreground">
         <div className="mx-auto max-w-5xl px-4 py-16 text-sm text-slate-500 sm:px-6 sm:py-20">
           Loading request…
         </div>
@@ -161,7 +185,7 @@ export default function RequestDetailPage() {
 
   if (error || !request) {
     return (
-      <main className="min-h-screen bg-background text-foreground">
+      <main className="portal-page min-h-screen bg-background text-foreground">
         <div className="mx-auto max-w-5xl px-4 py-16 sm:px-6 sm:py-20">
           <p className="break-words text-sm text-red-300">
             {error || "Request not found."}
@@ -181,46 +205,74 @@ export default function RequestDetailPage() {
   const currentIndex = steps.indexOf(request.status);
 
   return (
-    <main className="min-h-screen overflow-x-clip bg-background text-foreground">
+    <main className="portal-page request-detail-page min-h-screen overflow-x-clip bg-background text-foreground">
       <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
         <Link
           href="/account/requests"
-          className="text-sm text-slate-500 transition-colors hover:text-white"
+          className="request-detail-back-link"
         >
-          ← My Requests
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          My Requests
         </Link>
 
-        {/* Request heading */}
-        <div className="mt-6 flex flex-col gap-4 sm:mt-7 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-sky-400 sm:tracking-[0.2em]">
+        <section
+          className="request-detail-hero group mt-5"
+          aria-label={`${getDestinationLabel(
+            request.destination_city,
+            request.destination_country,
+          )} request details`}
+        >
+          <DestinationCover
+            city={request.destination_city}
+            country={request.destination_country}
+          />
+          <div className="request-detail-hero__shade" aria-hidden="true" />
+          <div className="request-detail-hero__panel">
+            <div className="request-detail-hero__eyebrow">
+              <Plane aria-hidden="true" className="h-3.5 w-3.5" />
               Request {request.id.slice(0, 8).toUpperCase()}
-            </p>
+            </div>
 
-            <h1 className="mt-3 break-words text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-              {getDestinationLabel(
-                request.destination_city,
-                request.destination_country,
+            <div className="request-detail-hero__heading">
+              <div className="min-w-0">
+                <p className="request-detail-hero__destination-label">
+                  <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
+                  Your destination
+                </p>
+                <h1 className="request-detail-hero__title">
+                  {getDestinationLabel(
+                    request.destination_city,
+                    request.destination_country,
+                  )}
+                </h1>
+              </div>
+              <PortalStatusBadge
+                status={request.status}
+                label={labels[request.status] ?? formatStatus(request.status)}
+              />
+            </div>
+
+            <div className="request-detail-hero__meta">
+              <span>
+                <CalendarDays aria-hidden="true" />
+                Submitted {formatDate(request.created_at) ?? "Date unavailable"}
+              </span>
+              {request.travel_start_date && (
+                <span>
+                  <Plane aria-hidden="true" />
+                  Travel {formatDate(request.travel_start_date) ?? "date unavailable"}
+                  {request.travel_end_date &&
+                    ` – ${formatDate(request.travel_end_date) ?? "date unavailable"}`}
+                </span>
               )}
-            </h1>
-
-            <p className="mt-2 text-sm text-slate-500">
-              Created{" "}
-              {new Date(
-                request.created_at,
-              ).toLocaleDateString()}
-            </p>
+            </div>
           </div>
-
-          <span className="w-fit max-w-full rounded-full border border-sky-400/15 bg-sky-400/[0.06] px-4 py-2 text-sm text-sky-300">
-            {labels[request.status] ?? formatStatus(request.status)}
-          </span>
-        </div>
+        </section>
 
         {/* Responsive status tracker */}
         <section
           aria-label="Request progress"
-          className="mt-8 rounded-3xl border border-white/[0.08] bg-white/[0.025] p-5 sm:mt-10 sm:p-6"
+          className="request-detail-panel mt-6 rounded-3xl border border-white/[0.08] bg-white/[0.025] p-4 sm:mt-8 sm:p-6"
         >
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -233,7 +285,7 @@ export default function RequestDetailPage() {
               </h2>
             </div>
 
-            <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-400">
+            <span className="shrink-0 rounded-full border border-primary/20 bg-primary-soft px-3 py-1.5 text-xs font-medium text-primary">
               {currentIndex >= 0
                 ? `${currentIndex + 1} of ${steps.length}`
                 : "In progress"}
@@ -412,25 +464,24 @@ export default function RequestDetailPage() {
         <div className="mt-8 grid min-w-0 gap-6 lg:mt-10 lg:grid-cols-[1.2fr_.8fr]">
           <div className="min-w-0 space-y-6">
             {/* Services */}
-            <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-white">
-                Services
-              </h2>
+            <section className="request-detail-panel rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-400/10 text-violet-700 dark:text-violet-200"><BriefcaseBusiness aria-hidden="true" className="h-4 w-4" /></span>
+                <div><h2 className="text-base font-semibold text-white">Services</h2><p className="mt-0.5 text-[11px] text-slate-500">What TISA is helping arrange</p></div>
+              </div>
 
               {request.request_services.length ? (
                 <div className="mt-5 space-y-3">
                   {request.request_services.map((item) => (
                     <div
                       key={item.id}
-                      className="flex flex-col gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 shadow-[0_6px_18px_rgba(1,9,17,0.08)] transition-colors hover:border-primary/20 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <span className="break-words text-sm text-slate-300">
                         {item.service_catalog?.name ?? "Service"}
                       </span>
 
-                      <span className="w-fit rounded-full bg-white/[0.04] px-2.5 py-1 text-xs capitalize text-slate-500">
-                        {formatStatus(item.status)}
-                      </span>
+                      <PortalStatusBadge status={item.status} />
                     </div>
                   ))}
                 </div>
@@ -442,7 +493,7 @@ export default function RequestDetailPage() {
             </section>
 
             {/* Request description */}
-            <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
+            <section className="request-detail-panel rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-white">
                 Your request
               </h2>
@@ -474,10 +525,14 @@ export default function RequestDetailPage() {
             </section>
 
             {/* Documents */}
-            <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-white">
-                Documents
-              </h2>
+            <section className="request-detail-panel rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-400/10 text-amber-700 dark:text-amber-200"><FileText aria-hidden="true" className="h-4 w-4" /></span>
+                <div><h2 className="text-base font-semibold text-white">Documents</h2><p className="mt-0.5 text-[11px] text-slate-500">Checklist and review status</p></div>
+              </div>
+              <p className="mt-3 rounded-xl border border-primary/15 bg-primary-soft/50 px-3 py-2.5 text-xs leading-5 text-slate-400">
+                Keep files attached to this request. Supported formats: PDF, JPG, PNG, and WebP.
+              </p>
 
               {request.request_documents.length ? (
                 <div className="mt-4 space-y-3">
@@ -497,7 +552,7 @@ export default function RequestDetailPage() {
           <aside className="min-w-0 space-y-6">
             {/* Bookings */}
             {request.bookings?.length > 0 && (
-              <section className="rounded-3xl border border-emerald-400/15 bg-emerald-400/[0.03] p-5 sm:p-6">
+              <section className="request-detail-panel request-detail-panel--accent rounded-3xl border border-emerald-400/15 bg-emerald-400/[0.03] p-5 sm:p-6">
                 <h2 className="text-lg font-semibold text-white">
                   Travel fulfillment
                 </h2>
@@ -519,9 +574,7 @@ export default function RequestDetailPage() {
                             booking.id.slice(0, 8)}
                         </span>
 
-                        <span className="w-fit rounded-full bg-white/[0.04] px-2.5 py-1 text-xs capitalize text-slate-500">
-                          {formatStatus(booking.status)}
-                        </span>
+                        <PortalStatusBadge status={booking.status} />
                       </div>
                     </Link>
                   ))}
@@ -530,7 +583,7 @@ export default function RequestDetailPage() {
             )}
 
             {/* Quotes */}
-            <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
+            <section className="request-detail-panel rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
               <h2 className="text-lg font-semibold text-white">
                 Quotes
               </h2>
@@ -548,9 +601,7 @@ export default function RequestDetailPage() {
                             {quote.quote_number}
                           </p>
 
-                          <p className="mt-2 text-sm capitalize text-slate-400">
-                            {formatStatus(quote.status)}
-                          </p>
+                          <div className="mt-2"><PortalStatusBadge status={quote.status} /></div>
                         </div>
 
                         <p className="break-words text-xl font-semibold text-white sm:text-right">
@@ -607,14 +658,11 @@ export default function RequestDetailPage() {
             </section>
 
             {/* Messages */}
-            <section className="rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
-              <h2 className="text-lg font-semibold text-white">
-                Messages
-              </h2>
-
-              <p className="mt-1 text-xs leading-5 text-slate-600">
-                Communicate directly with the TISA team.
-              </p>
+            <section className="request-detail-panel rounded-3xl border border-white/10 bg-white/[0.025] p-5 sm:p-6">
+              <div className="flex items-center gap-2.5">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-soft text-primary"><MessageCircle aria-hidden="true" className="h-4 w-4" /></span>
+                <div><h2 className="text-base font-semibold text-white">Messages</h2><p className="mt-0.5 text-[11px] text-slate-500">Your conversation with the TISA team</p></div>
+              </div>
 
               <div className="mt-4 space-y-3">
                 {request.request_messages.length ? (
@@ -728,27 +776,28 @@ function DocumentRow({
           </p>
         </div>
 
-        <span className="w-fit shrink-0 rounded-full bg-white/[0.04] px-2.5 py-1 text-xs capitalize text-slate-500">
-          {formatStatus(doc.status)}
-        </span>
+        <PortalStatusBadge status={doc.status} />
       </div>
 
       {["required", "rejected"].includes(doc.status) && (
         <div className="mt-4 space-y-3">
+          <p className="text-[11px] leading-5 text-slate-500">
+            Upload a PDF, JPG, PNG, or WebP file. Your document is securely attached to this request.
+          </p>
           <input
             type="file"
             accept=".pdf,.jpg,.jpeg,.png,.webp"
             onChange={(event) =>
               setFile(event.target.files?.[0] || null)
             }
-            className="block w-full max-w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-xs file:font-medium file:text-slate-200"
+            className="block w-full max-w-full rounded-xl border border-white/10 bg-background/50 p-2 text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-soft file:px-3 file:py-2 file:text-xs file:font-medium file:text-primary"
           />
 
           <button
             type="button"
             disabled={busy || !file}
             onClick={() => void upload()}
-            className="min-h-10 w-full rounded-xl bg-sky-400 px-4 py-2 text-xs font-semibold text-slate-950 transition-colors hover:bg-sky-300 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+            className="min-h-10 w-full rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-slate-950 transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transform-none sm:w-auto"
           >
             {busy ? "Uploading…" : "Upload document"}
           </button>

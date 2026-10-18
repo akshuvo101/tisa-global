@@ -40,7 +40,7 @@ export default function ThemeToggle() {
       aria-label={label}
       aria-pressed={theme === "light"}
       title={label}
-      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border bg-surface/80 text-foreground transition hover:bg-surface-light active:scale-95"
+      className="site-navbar__control grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border text-foreground transition active:scale-95"
     >
       {theme === "dark" ? (
         <Sun aria-hidden="true" className="h-[18px] w-[18px]" />

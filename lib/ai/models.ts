@@ -44,7 +44,7 @@ export const GEMINI_MODELS = {
   fallback: {
     name:
       process.env.GEMINI_FALLBACK_MODEL ??
-      "gemini-flash-lite-latest",
+      "gemini-3.5-flash",
     thinkingLevel: ThinkingLevel.MEDIUM,
   },
 
@@ -58,7 +58,7 @@ export const GEMINI_MODELS = {
   secondFallback: {
     name:
       process.env.GEMINI_SECOND_FALLBACK_MODEL ??
-      "gemini-3.5-flash-lite",
+      "gemini-flash-lite-latest",
     thinkingLevel: ThinkingLevel.LOW,
   },
 } satisfies Record<string, GeminiModelConfig>;

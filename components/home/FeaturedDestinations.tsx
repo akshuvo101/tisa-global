@@ -1,13 +1,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ArrowRight,
-  CalendarDays,
-  Compass,
-  MapPin,
-  Sparkles,
-} from "lucide-react";
+import { ArrowRight, CalendarDays, Compass, MapPin, Sparkles } from "lucide-react";
 
 import { destinations } from "@/lib/data/destination";
 
@@ -36,29 +30,26 @@ export default function FeaturedDestinations() {
                 aria-hidden="true"
                 className="h-4 w-4"
               />
-              CURATED FOR YOUR NEXT JOURNEY
+              A LITTLE INSPIRATION FOR THE ROAD
             </div>
 
             <h2
               id="featured-destinations-title"
               className="home-featured-reveal home-featured-delay-1 text-3xl font-semibold leading-tight tracking-[-0.045em] text-foreground sm:text-4xl lg:text-5xl"
             >
-              Find your next
-              <span className="block bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 bg-clip-text text-transparent">
-                somewhere extraordinary.
-              </span>
+              Find your next{" "}
+              <span className="home-featured-heading-accent">somewhere.</span>
             </h2>
 
             <p className="home-featured-reveal home-featured-delay-2 mt-4 max-w-xl text-sm leading-7 text-muted sm:text-base">
-              Discover remarkable places, understand travel requirements,
-              and start planning an international journey that feels right
-              for you.
+              Explore a few remarkable places to begin. When one feels right,
+              discover more details or ask TISA for help planning.
             </p>
           </div>
 
           <Link
             href="/explore"
-            className="group home-featured-reveal inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-border bg-surface-light/70 px-5 py-3 text-sm font-semibold text-foreground shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:self-auto motion-reduce:transform-none motion-reduce:transition-none"
+            className="group home-featured-reveal home-featured-explore-link inline-flex min-h-11 shrink-0 items-center justify-center gap-2 self-start rounded-full border border-border bg-surface-light/70 px-5 py-3 text-sm font-semibold text-foreground shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary sm:self-auto motion-reduce:transform-none motion-reduce:transition-none"
           >
             Explore all destinations
             <ArrowRight
@@ -85,12 +76,14 @@ export default function FeaturedDestinations() {
                 {/* Destination image */}
                 <div
                   data-theme-contrast="dark"
-                  className="relative aspect-[16/11] overflow-hidden bg-slate-900"
+                  className="home-destination-card__image relative aspect-[16/10] overflow-hidden bg-slate-900"
                 >
                   <Image
                     src={destination.imageUrl}
                     alt={`${destination.name}, ${destination.country}`}
                     fill
+                    loading="lazy"
+                    decoding="async"
                     sizes="(max-width: 639px) calc(100vw - 40px), (max-width: 1023px) calc(50vw - 44px), (max-width: 1279px) calc(33.333vw - 32px), 395px"
                     className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.06] motion-reduce:transform-none motion-reduce:transition-none"
                   />
@@ -141,7 +134,7 @@ export default function FeaturedDestinations() {
                 </div>
 
                 {/* Card content */}
-                <div className="flex flex-1 flex-col p-4 sm:p-5">
+                <div className="home-destination-card__content flex flex-1 flex-col p-4 sm:p-5">
                   {/* Categories */}
                   <div className="flex flex-wrap gap-2">
                     {destination.category.slice(0, 3).map((category) => (

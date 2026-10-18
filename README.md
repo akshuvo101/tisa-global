@@ -1,197 +1,150 @@
+# TISA Global
 
-# TISA Global 🌍
+TISA Global is a travel-assistance web application for destination and service discovery, event research, and customer travel enquiries. It pairs a public-facing travel experience with Supabase-backed customer and administrator workflows.
 
-### International Travel Service Around The World
+**Live demo:** [tisa-global.vercel.app](https://tisa-global.vercel.app) · **Source:** [github.com/akshuvo101/tisa-global](https://github.com/akshuvo101/tisa-global)
 
-TISA Global is a modern international travel service platform designed to help travelers explore destinations, understand travel requirements, and discover services related to international journeys.
+> This project supports travel research and assistance requests; it is not a live booking or payment platform, visa authority, or source of official travel advice.
 
-The platform aims to bring essential travel information and assistance into one accessible experience, helping users move from exploring opportunities to planning their next journey.
+## Contents
 
-**Live Website:** [Add your deployed website URL]
+- [Overview and features](#overview-and-features)
+- [Screenshots](#screenshots)
+- [Workflows and routes](#workflows-and-routes)
+- [Technology](#technology)
+- [Authentication and database](#authentication-and-database)
+- [Integrations](#integrations)
+- [Getting started](#getting-started)
+- [Quality checks](#quality-checks)
+- [Deployment](#deployment)
+- [Security and limitations](#security-and-limitations)
+- [Contributing and license](#contributing-and-license)
+- [Developer](#developer)
 
----
+## Overview and features
 
-## ✨ Features
+Travel planning can involve destination research, service enquiries, document exchange, and follow-up with providers. TISA Global connects these steps in one application for prospective travelers, signed-in customers, and TISA administrators.
 
-- **Travel Discovery** — Explore international destinations and travel opportunities.
-- **Travel Information** — Discover useful information to help plan international journeys.
-- **Visa & Documentation** — Access travel-related documentation guidance and resources.
-- **Travel Packages** — Explore travel package information and available service options.
-- **International Assistance** — Submit enquiries related to flights, visas, education, conferences, medical travel, and other assistance.
-- **Contact Without Login** — Send an enquiry without creating an account.
-- **Contact Form Integration** — Submit enquiries through a Next.js API route and store them in Supabase.
-- **Responsive Interface** — Designed to provide a consistent experience across desktop, tablet, and mobile devices.
-- **Modern UI** — A dark visual theme with clean layouts, subtle gradients, and interactive interface elements.
+- **Discovery:** destination guides, active service catalog entries, repository-maintained package examples, events, and published articles.
+- **Assistance workflow:** customers can submit and track requests, exchange messages and documents, view quotes and booking records, manage profile and notification settings, and access trip information.
+- **Operations:** administrators can manage customers, requests, documents, quotes, booking records, events, articles, services, notifications, and integration configuration.
+- **AI and planning:** TISA AI provides Gemini-backed travel assistance; optional web search supports selected research. Planner estimates and public saved plans are planning aids, not live quotes. Public `/trips` data is browser-local, separate from authenticated `/account/trips`.
+- **Responsive interface:** App Router UI with dark/light themes, responsive layouts, travel imagery, and reduced-motion support.
 
-> Note: Feature availability may vary while the platform is under development. Only services that are implemented and operational should be considered available.
+Database-backed workflows require a configured Supabase project and appropriate schema, policies, and data. Package pricing and availability are demo/planning information. A TISA booking record is not confirmation from a travel supplier.
 
----
+## Screenshots
 
-## 🛠️ Tech Stack
+No product screenshots are currently checked into the repository. Desktop and mobile captures of discovery, AI assistance, and the customer workspace would improve the project showcase. Remove personal or document data before sharing screenshots.
 
-| Technology | Purpose |
+## Workflows and routes
+
+1. Visitors explore destinations, services, packages, events, and articles, or submit a contact enquiry.
+2. Signed-in customers create an assistance request with trip details.
+3. Administrators review requests and coordinate documents, messages, quotes, and booking records.
+4. Customers follow operational updates in their account workspace. Planner saves on public `/trips` remain browser-local.
+
+| Route group | Main routes | Purpose/access |
+|---|---|---|
+| Public | `/`, `/about`, `/contact`, `/explore`, `/destinations/[id]`, `/services`, `/services/[slug]`, `/packages`, `/packages/[id]`, `/events`, `/events/[slug]`, `/articles`, `/articles/[slug]` | Information and discovery |
+| AI and planning | `/ai`, `/planner`, `/trips`, `/trips/[id]` | AI assistance and planning; public trip saves use browser storage |
+| Authentication | `/login`, `/signup`, `/auth/callback` | Password and Google OAuth through Supabase (OAuth provider setup required) |
+| Customer | `/request`, `/account` and nested account pages | Authenticated request submission and customer workspace |
+| Administration | `/admin` and nested admin pages | Administrator operations |
+
+API handlers under `/api` support account data, requests and related messages/documents, quotes, bookings, notifications, services, events, contact, AI, destination imagery, administrator operations, and integration webhooks. Protected APIs perform authorization checks server-side.
+
+## Technology
+
+| Technology | Role |
 |---|---|
-| Next.js | Application framework and routing |
-| React | Component-based user interface |
-| TypeScript | Type-safe development |
-| Tailwind CSS | Styling and responsive layouts |
-| Supabase | Database and backend services |
-| PostgreSQL | Relational data storage |
-| Supabase SSR | Supabase client integration |
+| Next.js 16.3.8, React 19.2.8 | App Router, server-rendered pages, UI, and API handlers |
+| TypeScript 5.9.3 | Strictly typed application code |
+| Tailwind CSS 4.3.3 | Responsive styling and theme tokens |
+| Supabase (`@supabase/ssr`, `@supabase/supabase-js`) | PostgreSQL, Auth, RLS, Storage, and server/browser clients |
+| Google GenAI SDK, Zod | Gemini integration and runtime validation |
+| React Markdown, Remark, Rehype | Article rendering and sanitization |
 | Lucide React | Interface icons |
-| Vercel | Deployment platform |
+| Node test runner, `tsx` | TypeScript tests |
+| Vercel | Live deployment platform |
 
----
+Versions above were checked with `npm ls next react typescript tailwindcss --depth=0`. The project uses Geist via `next/font/google`; Tailwind v4 is integrated through PostCSS.
 
-## 📁 Project Structure
+## Authentication and database
 
-```text
-tisa-global/
-├── app/
-│   ├── api/
-│   │   └── contact/
-│   │       └── route.ts
-│   ├── contact/
-│   │   └── page.tsx
-│   ├── layout.tsx
-│   ├── page.tsx
-│   └── globals.css
-├── components/
-│   ├── contact/
-│   │   └── ContactForm.tsx
-│   └── layout/
-│       ├── Navbar.tsx
-│       └── Footer.tsx
-├── lib/
-│   └── supabase/
-├── public/
-├── .env.local
-├── package.json
-├── next.config.ts
-├── tsconfig.json
-└── README.md
-```
+Supabase Auth supports password and Google sign-in/sign-up. Cookie-aware clients are used on the server and browser. [`proxy.ts`](proxy.ts) refreshes sessions and redirects unauthenticated requests to `/login`; layouts and protected APIs also enforce access.
 
-*The structure above illustrates the main application areas. Your actual directory structure may contain additional files and folders.*
+The application roles are `customer` and `admin`. Customer data is scoped to the signed-in user; admin workflows require the administrator role. The repository contains 14 SQL migrations defining the portal schema, RLS policies, grants, and a private `tisa-documents` bucket with customer-folder and admin access rules.
 
----
+**Migration warning:** `20260929_tisa_core.sql` and `20261001_tisa_core_clean.sql` both unconditionally create the same enum types. The directory should not be treated as a directly executable sequence without resolving the baseline and testing the chosen migration set on a non-production database.
 
-## 🚀 Getting Started
+## Integrations
 
-### Prerequisites
+| Integration | Status |
+|---|---|
+| Supabase | Required for authentication and persisted customer/admin workflows. Contact storage has an additional setup gap described below. |
+| Gemini | Server-side AI responses when `GEMINI_API_KEY` is configured; model names/fallbacks are configurable. |
+| Tavily | Optional web search for selected AI research workflows. Results are not authoritative verification. |
+| Unsplash | Optional destination image endpoint, requiring `UNSPLASH_ACCESS_KEY`. |
+| Event provider | Optional HTTP/JSON source; administrator-triggered sync creates records/drafts for review. No scheduled sync. |
+| Resend / WhatsApp webhook | Optional outbound notification adapters; credentials do not guarantee delivery. |
+| Flight / hotel / visa | Disabled future registry entries; no live provider search, booking, or visa decision. |
 
-Make sure you have the following installed:
+## Getting started
 
-- Node.js (a version supported by your installed Next.js release)
-- npm, pnpm, yarn, or bun
-- A Supabase project for backend features
+### Requirements and installation
 
-### 1. Clone the Repository
+- Node.js 20.9 or later and npm.
+- A Supabase project for authenticated and database-backed workflows.
 
 ```bash
 git clone https://github.com/akshuvo101/tisa-global.git
 cd tisa-global
+npm ci
 ```
 
-If your GitHub repository uses a different URL or name, replace the repository URL and directory accordingly.
-
-### 2. Install Dependencies
-
-Using npm:
-
-```bash
-npm install
-```
-
-Or use your preferred package manager:
-
-```bash
-pnpm install
-```
-
-```bash
-yarn install
-```
-
-```bash
-bun install
-```
-
-### 3. Configure Environment Variables
-
-Create a `.env.local` file in the project root and configure your Supabase credentials:
+Create `.env.local` in the repository root:
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+# Required for Supabase-backed features
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+
+# Optional canonical URL (defaults to https://tisa-global.vercel.app)
+NEXT_PUBLIC_SITE_URL=
+
+# Optional AI and search
+GEMINI_API_KEY=
+GEMINI_MODEL=
+GEMINI_FALLBACK_MODEL=
+GEMINI_SECOND_FALLBACK_MODEL=
+TAVILY_API_KEY=
+
+# Optional destination imagery and event feed
+UNSPLASH_ACCESS_KEY=
+TISA_EVENT_PROVIDER_URL=
+TISA_EVENT_PROVIDER_API_KEY=
+
+# Optional outbound notifications and incoming webhook auth
+RESEND_API_KEY=
+RESEND_FROM_EMAIL=
+TISA_WHATSAPP_WEBHOOK_URL=
+TISA_WHATSAPP_WEBHOOK_SECRET=
+TISA_WEBHOOK_SECRET=
+
+# Reserved disabled provider slots
+TISA_FLIGHT_PROVIDER_URL=
+TISA_HOTEL_PROVIDER_URL=
+TISA_VISA_PROVIDER_URL=
 ```
 
-Replace the placeholder values with the credentials from your Supabase project.
+These names are based on source usage. The committed [`.env.example`](.env.example) uses `NEXT_PUBLIC_SUPABASE_ANON_KEY`, but the app reads `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`; use the latter. Some optional names above are not listed in the example file.
 
-**Security notes:**
+### Database preparation
 
-- Never commit `.env.local` to Git.
-- Never expose a Supabase service role key in client-side code.
-- Keep private credentials on the server.
-- The public publishable key is intended for use with appropriately configured Supabase permissions and Row Level Security (RLS).
+Review [`supabase/migrations/`](supabase/migrations/) and resolve the duplicate core enum creation before applying a migration sequence. Test against a disposable/non-production Supabase project, then verify tables, roles, RLS policies, grants, and the private document bucket. There is no migration script in `package.json` or `supabase/config.toml`; `npm run dev` does not provision the database.
 
-### 4. Configure the Contact Form Database
-
-The contact form uses the `contact_messages` table in Supabase.
-
-The table stores submitted enquiries with fields such as:
-
-- `id`
-- `name`
-- `email`
-- `assistance_type`
-- `destination`
-- `message`
-- `status`
-- `created_at`
-
-Make sure the table exists and its column names match the application code.
-
-For anonymous contact submissions, configure the required table privileges and RLS insert policy. Allow only the intended insert operation for the `anon` role, and do not grant public visitors permission to read or modify submitted enquiries.
-
-### 5. Run the Development Server
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-The application will reload as you make changes to the source files.
-
----
-
-## 📬 Contact Form
-
-TISA Global includes a public contact form so visitors can submit enquiries without logging in.
-
-### Supported Enquiry Categories
-
-- Flights & Travel
-- Visa & Documents
-- Travel Packages
-- Education & Conferences
-- Medical Travel
-- Other Assistance
-
-### Submission Flow
-
-1. A visitor completes the contact form.
-2. The form sends a POST request to `/api/contact`.
-3. The API validates the submitted data.
-4. The enquiry is inserted into the Supabase `contact_messages` table.
-5. The visitor receives a success or error message.
-
-The form is designed to make it easier for visitors to contact the platform without creating an account.
-
----
-
-## 🧑‍💻 Development
+The public contact API validates enquiries and attempts to insert into `contact_messages`, but no migration creates that table or its anonymous insert policy. Contact persistence requires manual schema setup with narrowly scoped anonymous insert permission; do not allow public reads or updates.
 
 Start the development server:
 
@@ -199,104 +152,50 @@ Start the development server:
 npm run dev
 ```
 
-Run the production build:
+Open [http://localhost:3000](http://localhost:3000). Provider-backed features require their optional configuration.
 
-```bash
-npm run build
-```
+## Quality checks
 
-Start the production server after building:
-
-```bash
-npm run start
-```
-
-Run ESLint if the corresponding script is configured in `package.json`:
+Available commands:
 
 ```bash
 npm run lint
+npx tsc --noEmit
+npm run test:articles
+npx tsx --test tests/web-search.test.ts
+npm run build
+npm run start
 ```
 
-### Code Organization
+`npm run start` serves the production build after `npm run build`.
 
-- `app/` — Pages, layouts, and API routes.
-- `components/` — Reusable interface components.
-- `lib/` — Shared utilities and backend integrations.
-- `public/` — Static assets.
-- `app/globals.css` — Global styles and theme configuration.
+Checks actually run for this README update:
 
----
+- `npx tsc --noEmit` — passed.
+- `npm run test:articles` — passed, 4 tests.
+- `npx tsx --test tests/web-search.test.ts` — passed, 7 tests.
+- `npm run build` — passed.
+- `npm run lint` — failed with ESLint errors in application files; no application files were changed for this documentation task.
 
-## 🚢 Deployment
+## Deployment
 
-TISA Global can be deployed on [Vercel](https://vercel.com/), which supports Next.js applications.
+The live demo runs on Vercel. For another deployment, import the repository, configure Supabase and any required providers, prepare the database, set `NEXT_PUBLIC_SITE_URL` to the deployed origin if different from the default, and deploy with the standard Next.js build. Verify auth, RLS, request workflows, and each enabled provider in the target environment.
 
-### Deployment Steps
+## Security and limitations
 
-1. Push your project to GitHub.
-2. Import the repository into Vercel.
-3. Configure the required environment variables in the Vercel project settings.
-4. Deploy the application.
-5. Test the website and contact form in the deployed environment.
+- Keep provider credentials and webhook secrets server-side. Supabase URL, publishable key, and `NEXT_PUBLIC_SITE_URL` are public; never expose a service-role key in client code.
+- Enforce authorization with RLS and server-side ownership/role checks, not UI visibility alone. Customer documents contain sensitive identity information; keep storage private and signed links short-lived.
+- The incoming webhook checks `TISA_WEBHOOK_SECRET` but inserts using a session Supabase client. Its migration has an admin-only RLS policy, so this write path needs authorization testing; the shared secret alone may not satisfy RLS.
+- The public AI endpoint has no evident application-level throttling or complete request-schema validation. Apply appropriate abuse controls before high-volume exposure.
+- No live flight/hotel inventory, payment gateway, customer checkout, or enabled visa provider is implemented. AI and travel content can be incomplete or outdated and are not official advice.
+- Email and WhatsApp depend on successful provider configuration. Event sync is admin-triggered, and planner saves are browser-local.
 
-Make sure the production Supabase project has the correct database schema, privileges, and RLS policies.
+## Contributing and license
 
-For more information, see the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying).
+There is no `CONTRIBUTING.md` or checked-in CI workflow. For contributions, describe database/environment requirements and run relevant checks. No `LICENSE` file is present; public repository visibility does not grant reuse or redistribution rights.
 
----
+## Developer
 
-## 🔒 Security & Privacy
-
-- Validate submitted form data on the server.
-- Apply Row Level Security to database tables.
-- Restrict anonymous contact submissions to the intended operation.
-- Never expose private server credentials in client-side code.
-- Add rate limiting and spam protection before relying on the public contact form in production.
-- Avoid submitting passwords, payment card information, or other sensitive data through general enquiries.
-
----
-
-## 🗺️ Roadmap
-
-Potential improvements as development progresses:
-
-- [ ] Expand destination discovery and travel information.
-- [ ] Improve visa and documentation resources.
-- [ ] Develop travel package and service discovery.
-- [ ] Enhance mobile navigation and interactive experiences.
-- [ ] Expand travel assistance workflows.
-- [ ] Add appropriate enquiry management tools for authorized administrators.
-- [ ] Improve accessibility, performance, and security.
-- [ ] Add further features based on user feedback.
-
----
-
-## 🤝 Contributing
-
-TISA Global is an evolving project.
-
-If you would like to suggest an improvement or report an issue, open a GitHub issue or submit a pull request if contributions are enabled for the repository.
-
-Please include a clear description of the proposed change and its purpose.
-
----
-
-## 📄 License
-
-The project's license has not been specified here. Add a `LICENSE` file and update this section once the licensing terms have been decided.
-
----
-
-## 👨‍💻 Developer
-
-**AK Shuvo**
-
-- **Portfolio:** [akshuvo.vercel.app](https://akshuvo.vercel.app)
-- **GitHub:** [akshuvo101](https://github.com/akshuvo101)
-- **LinkedIn:** [AK Shuvo](https://www.linkedin.com/in/ak-shuvo-a81187246/)
-
----
-
-<p align="center">
-  Built with Next.js, TypeScript, and a vision for more accessible international travel.
-</p>
+- **Portfolio:** [https://akshuvo.vercel.app](https://akshuvo.vercel.app/)
+- **GitHub:** [https://github.com/akshuvo101](https://github.com/akshuvo101)
+- **LinkedIn:** [https://www.linkedin.com/in/ak-shuvo-a81187246/](https://www.linkedin.com/in/ak-shuvo-a81187246/)

@@ -1,4 +1,7 @@
 
+"use client";
+
+import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
@@ -13,148 +16,205 @@ const steps = [
     number: "01",
     title: "Discover",
     description:
-      "Find a conference, destination, service, or travel opportunity that matches your plans.",
-    icon: Compass,
+      "Find a conference, destination, service, or global opportunity that matches your plans.",
     label: "Explore your options",
+    icon: Compass,
+    accent: "teal",
   },
   {
     number: "02",
     title: "Tell TISA",
     description:
-      "Share your destination, travel dates, deadlines, and the services you need.",
-    icon: ClipboardList,
+      "Share your destination, travel dates, deadlines, and the assistance you need.",
     label: "Submit your request",
+    icon: ClipboardList,
+    accent: "blue",
   },
   {
     number: "03",
     title: "We Review",
     description:
-      "Our team reviews your requirements, explains the next steps, and requests documents when needed.",
-    icon: CheckCircle2,
+      "Our team reviews your requirements, explains the next steps, and guides you through the details.",
     label: "Review & coordination",
+    icon: CheckCircle2,
+    accent: "violet",
   },
   {
     number: "04",
     title: "Travel with Confidence",
     description:
       "Once you approve the quote, we coordinate the agreed services to help prepare for your journey.",
-    icon: PlaneTakeoff,
     label: "Prepare for departure",
+    icon: PlaneTakeoff,
+    accent: "mint",
   },
-];
+] as const;
 
 export default function HowItWorks() {
   return (
     <section
       aria-labelledby="how-it-works-title"
-      className="home-section relative isolate overflow-hidden border-t border-border"
+      className="home-journey relative isolate overflow-hidden border-t border-border"
     >
-      {/* Subtle background accent */}
+      {/* Ambient background */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-0 -z-10 h-72 w-[min(700px,90vw)] -translate-x-1/2 rounded-full bg-primary/[0.055] blur-3xl"
-      />
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+      >
+        <div className="home-journey__glow home-journey__glow--one" />
+        <div className="home-journey__glow home-journey__glow--two" />
+
+        <div
+          className="home-journey__grid absolute inset-0"
+        />
+      </div>
 
       <div className="mx-auto max-w-7xl px-5 py-16 sm:px-8 sm:py-20 lg:px-10 lg:py-24">
-        {/* Heading */}
-        <div className="mx-auto max-w-2xl text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-surface-light/80 px-3.5 py-2 text-xs font-semibold tracking-wide text-primary shadow-sm">
-            <Sparkles aria-hidden="true" className="h-4 w-4" />
-            YOUR JOURNEY, STEP BY STEP
+        {/* Section heading */}
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="home-journey__eyebrow mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-surface-light/75 px-4 py-2 text-[10px] font-bold tracking-[0.16em] text-primary shadow-sm backdrop-blur-xl sm:text-xs">
+            <Sparkles
+              aria-hidden="true"
+              className="h-4 w-4"
+            />
+            YOUR JOURNEY, SIMPLIFIED
           </div>
 
           <h2
             id="how-it-works-title"
-            className="text-3xl font-semibold leading-tight tracking-[-0.045em] text-foreground sm:text-4xl lg:text-5xl"
+            className="home-journey__heading text-3xl font-semibold leading-[1.12] tracking-[-0.05em] text-foreground sm:text-4xl lg:text-5xl"
           >
-            From your first idea
-            <span className="block text-primary">
-              to your next destination.
+            Four steps.
+            <span className="home-journey__heading-accent block">
+              One world of possibilities.
             </span>
           </h2>
 
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-muted sm:text-base">
-            International travel has many moving parts. Tell us what you need,
-            and we will help you understand and coordinate the next steps.
+          <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-muted sm:text-base sm:leading-8">
+            From the first spark of an idea to the details of your departure,
+            TISA helps you navigate the journey with greater clarity.
           </p>
         </div>
 
-        {/* Steps */}
-        <div className="relative mt-12 lg:mt-16">
-          {/* Connecting line on desktop */}
+        {/* Journey timeline */}
+        <div className="home-journey__timeline relative mt-12 sm:mt-16 lg:mt-20">
+          {/* Animated desktop connector */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-[2rem] hidden h-px bg-gradient-to-r from-primary/10 via-primary/40 to-primary/10 lg:block"
-          />
+            className="home-journey__connector"
+          >
+            <span className="home-journey__connector-fill" />
+            <span className="home-journey__connector-pulse" />
+          </div>
 
-          <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+          <ol className="home-journey__steps relative grid list-none grid-cols-1 gap-5 p-0 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4 lg:gap-5">
             {steps.map(({ icon: Icon, ...step }, index) => (
               <li
                 key={step.number}
-                className="home-process-card group relative flex h-full flex-col rounded-[1.5rem] border border-border/80 bg-surface-light p-5 shadow-sm transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-black/[0.05] motion-reduce:transform-none motion-reduce:transition-none sm:p-6"
+                className={`home-journey__step home-journey__step--${step.accent} group relative`}
                 style={{
-                  animationDelay: `${index * 80}ms`,
+                  animationDelay: `${index * 120}ms`,
                 }}
               >
-                {/* Icon and number */}
-                <div className="relative flex items-center justify-between">
-                  <div className="relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/15 bg-primary-soft text-primary shadow-sm transition-[transform,background-color] duration-300 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none">
-                    <Icon
-                      aria-hidden="true"
-                      className="h-6 w-6"
-                      strokeWidth={1.7}
-                    />
+                {/* Timeline node */}
+                <div className="home-journey__node-wrap">
+                  <span className="home-journey__node-ring" />
+                  <span className="home-journey__node">
+                    <span className="home-journey__node-inner" />
+                  </span>
+                </div>
+
+                {/* Step panel */}
+                <article className="home-journey__panel relative flex h-full min-h-[260px] flex-col overflow-hidden rounded-[1.5rem] border border-border/80 bg-surface-light/75 p-5 shadow-sm backdrop-blur-xl transition-[transform,border-color,box-shadow,background-color] duration-300 group-hover:-translate-y-1 group-hover:border-primary/35 group-hover:shadow-xl group-hover:shadow-black/[0.07] motion-reduce:transform-none motion-reduce:transition-none sm:p-6 lg:mt-8">
+                  {/* Accent artwork */}
+                  <div
+                    aria-hidden="true"
+                    className="home-journey__panel-glow"
+                  />
+                  <div
+                    aria-hidden="true"
+                    className="home-journey__panel-orbit"
+                  />
+
+                  {/* Top row */}
+                  <div className="relative z-10 flex items-center justify-between">
+                    <div className="home-journey__icon-box grid h-12 w-12 place-items-center rounded-2xl border border-primary/20 bg-primary-soft text-primary shadow-sm transition-transform duration-300 group-hover:scale-105 motion-reduce:transform-none motion-reduce:transition-none sm:h-14 sm:w-14">
+                      <Icon
+                        aria-hidden="true"
+                        className="h-5 w-5 sm:h-6 sm:w-6"
+                        strokeWidth={1.7}
+                      />
+                    </div>
+
+                    <span className="home-journey__number select-none text-4xl font-semibold leading-none tracking-[-0.07em] sm:text-5xl">
+                      {step.number}
+                    </span>
                   </div>
 
-                  <span
-                    aria-hidden="true"
-                    className="text-3xl font-semibold tracking-[-0.06em] text-primary/[0.20] transition-colors duration-300 group-hover:text-primary/50"
-                  >
-                    {step.number}
-                  </span>
-                </div>
+                  {/* Copy */}
+                  <div className="relative z-10 mt-7">
+                    <p className="home-journey__step-kicker text-[10px] font-bold uppercase tracking-[0.17em] text-primary/80">
+                      STEP {step.number}
+                    </p>
 
-                {/* Step content */}
-                <h3 className="mt-7 text-lg font-semibold tracking-tight text-foreground sm:text-xl">
-                  {step.title}
-                </h3>
+                    <h3 className="mt-2 text-lg font-semibold leading-snug tracking-tight text-foreground sm:text-xl">
+                      {step.title}
+                    </h3>
 
-                <p className="mt-3 flex-1 text-sm leading-6 text-muted">
-                  {step.description}
-                </p>
+                    <p className="mt-3 text-sm leading-6 text-muted">
+                      {step.description}
+                    </p>
+                  </div>
 
-                {/* Supporting label */}
-                <div className="mt-6 flex items-center justify-between gap-2 border-t border-border/80 pt-4">
-                  <span className="text-xs font-medium leading-5 text-muted">
-                    {step.label}
-                  </span>
+                  {/* Bottom label */}
+                  <div className="home-journey__step-footer relative z-10 mt-auto flex items-center justify-between gap-3 border-t border-border/80 pt-4 mt-6">
+                    <span className="text-xs font-medium leading-5 text-muted">
+                      {step.label}
+                    </span>
 
-                  {index < steps.length - 1 ? (
-                    <ArrowRight
+                    <span
                       aria-hidden="true"
-                      className="h-4 w-4 shrink-0 text-primary/60 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
-                    />
-                  ) : (
-                    <CheckCircle2
-                      aria-hidden="true"
-                      className="h-4 w-4 shrink-0 text-primary"
-                    />
-                  )}
-                </div>
+                      className="home-journey__step-arrow grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-surface text-muted transition-[transform,color,border-color,background-color] duration-200 group-hover:translate-x-0.5 group-hover:border-primary/30 group-hover:bg-primary-soft group-hover:text-primary motion-reduce:transform-none motion-reduce:transition-none"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </span>
+                  </div>
+                </article>
               </li>
             ))}
           </ol>
         </div>
 
-        {/* Closing note */}
-        <div className="mx-auto mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-2 text-center text-sm leading-6 text-muted sm:mt-10">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-            <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
-          </span>
-          <p>
-            Not sure where to start? Begin with a request. We will help clarify
-            what comes next.
-          </p>
+        {/* Closing prompt */}
+        <div className="home-journey__closing mx-auto mt-10 flex max-w-3xl flex-col items-center justify-between gap-5 rounded-2xl border border-border/80 bg-surface-light/60 p-5 text-center shadow-sm backdrop-blur-xl sm:mt-12 sm:flex-row sm:px-6 sm:py-5 sm:text-left">
+          <div className="flex items-start gap-3">
+            <span className="home-journey__closing-icon grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/20 bg-primary-soft text-primary">
+              <Sparkles
+                aria-hidden="true"
+                className="h-5 w-5"
+              />
+            </span>
+
+            <div>
+              <h3 className="text-sm font-semibold text-foreground sm:text-base">
+                Not sure where to start?
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-muted sm:text-sm">
+                Tell us your goal. We’ll help you understand the next step.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/request"
+            className="home-journey__cta group inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold sm:w-auto"
+          >
+            Start a request
+            <ArrowRight
+              aria-hidden="true"
+              className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
+            />
+          </Link>
         </div>
       </div>
     </section>

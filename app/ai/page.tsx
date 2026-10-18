@@ -12,7 +12,11 @@ import {
 import { useSearchParams } from "next/navigation";
 import {
   ArrowUpRight,
+  ArrowRight,
+  CalendarDays,
   Compass,
+  FileText,
+  GraduationCap,
   MapPin,
   Menu,
   Plane,
@@ -44,6 +48,109 @@ type ChatMessage =
       content: string;
       data: AIResponse;
     };
+
+function isFundingInquiry(
+  messages: ChatMessage[],
+  assistantIndex: number,
+): boolean {
+  const response = messages[assistantIndex];
+  if (response?.role !== "assistant") return false;
+
+  const lastUserMessage = messages
+    .slice(0, assistantIndex)
+    .reverse()
+    .find((message) => message.role === "user");
+
+  return (
+    response.data.webResults?.some(
+      (result) => result.category === "funding",
+    ) === true ||
+    (lastUserMessage?.role === "user" &&
+      /\b(?:scholarships?|bursaries|funding|grants?|financial aid|fee waivers?|stipends?|fellowships?|student volunteer)\b|স্কলারশিপ|বৃত্তি|অর্থায়ন|অর্থায়ন|অনুদান|ফেলোশিপ|স্টাইপেন্ড/i.test(
+        lastUserMessage.content,
+      ))
+  );
+}
+
+function getAssistantHistoryContent(message: Extract<ChatMessage, { role: "assistant" }>) {
+  const visibleContext = {
+    itinerary: message.data.itinerary.slice(0, 4).map((day) => ({
+      day: day.day,
+      title: day.title.slice(0, 100),
+      activities: day.activities
+        .slice(0, 2)
+        .map((activity) => activity.slice(0, 120)),
+    })),
+    estimatedTotal: {
+      currency: message.data.costEstimate.currency,
+      ...message.data.costEstimate.total,
+    },
+    opportunities: message.data.webResults?.slice(0, 2).map((result) => ({
+      title: result.title.slice(0, 120),
+      category: result.category,
+      status: result.status,
+      deadline: result.deadline?.slice(0, 140) ?? null,
+      eligibility: result.eligibility?.slice(0, 180) ?? null,
+      funding: result.fundingCoverage?.slice(0, 120) ?? null,
+      applicationUrl: result.applicationUrl?.slice(0, 240) ?? null,
+      sourceUrl: result.sourceUrl.slice(0, 240),
+    })),
+    events: message.data.events.slice(0, 2).map((event) => ({
+      title: event.title.slice(0, 120),
+      date: event.startDate,
+      sourceUrl: event.sourceUrl?.slice(0, 240) ?? null,
+    })),
+  };
+  const hasVisibleContext =
+    visibleContext.itinerary.length > 0 ||
+    (visibleContext.opportunities?.length ?? 0) > 0 ||
+    visibleContext.events.length > 0 ||
+    message.data.costEstimate.total.min !== 0 ||
+    message.data.costEstimate.total.max !== 0;
+
+  return hasVisibleContext
+    ? `${message.content.slice(0, 600)}\nPreviously shown plan and results: ${JSON.stringify(visibleContext)}`
+    : message.content;
+}
+
+const starterCategories = [
+  {
+    title: "Trip Planning",
+    description: "Shape a trip around your time, budget, and travel style.",
+    icon: Plane,
+    prompts: [
+      "Plan a 5-day Japan trip from Dhaka for two people.",
+      "Where can I travel from Dhaka on a ৳100,000 budget?",
+    ],
+  },
+  {
+    title: "Conferences & Events",
+    description: "Discover upcoming conferences, events, and student opportunities.",
+    icon: CalendarDays,
+    prompts: [
+      "Find future AI conferences in Asia with student registration for Bangladeshi undergraduates.",
+      "Find future CS/AI conferences for Bangladeshi undergraduates and include paper requirements.",
+    ],
+  },
+  {
+    title: "Scholarships, Travel Grants & Fee Waivers",
+    description: "Look for funding options and check their stated eligibility.",
+    icon: GraduationCap,
+    prompts: [
+      "Find currently open CS/AI conference travel grants for Bangladeshi undergraduates.",
+      "Find scholarships and fee waivers for Bangladesh undergraduate CS students, with eligibility and deadlines.",
+    ],
+  },
+  {
+    title: "Visa & Travel Documents",
+    description: "Get a practical checklist and know what to confirm officially.",
+    icon: FileText,
+    prompts: [
+      "What documents should I prepare for a Japan tourist visa from Bangladesh?",
+      "What should I check before traveling to Singapore for a conference?",
+    ],
+  },
+];
 
 /* -------------------------------------------------------------------------- */
 /* Small UI helpers                                                           */
@@ -81,6 +188,301 @@ function formatCurrency(amount: number, currency: string) {
   return currency === "BDT"
     ? `৳${formatted}`
     : `${currency} ${formatted}`;
+}
+
+type OpportunityResult = NonNullable<AIResponse["webResults"]>[number];
+
+function WebOpportunityCards({
+  results,
+}: {
+  results: OpportunityResult[];
+}) {
+  const statusStyles: Record<OpportunityResult["status"], string> = {
+    open: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+    upcoming: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+    closed: "border-slate-400/20 bg-slate-400/10 text-slate-300",
+    not_applicable: "border-slate-400/20 bg-slate-400/10 text-slate-300",
+    eligibility_restricted:
+      "border-amber-400/20 bg-amber-400/10 text-amber-300",
+    status_unconfirmed:
+      "border-amber-400/20 bg-amber-400/10 text-amber-200",
+  };
+  const statusLabels: Record<OpportunityResult["status"], string> = {
+    open: "Open",
+    upcoming: "Upcoming",
+    closed: "Closed",
+    not_applicable: "Not a scholarship",
+    eligibility_restricted: "Eligibility Restricted",
+    status_unconfirmed: "Status unconfirmed",
+  };
+  const opportunityTypeLabels: Record<
+    OpportunityResult["opportunityType"],
+    string
+  > = {
+    undergraduate_scholarship: "Undergraduate scholarship",
+    university_tuition_waiver: "University-specific tuition waiver (not necessarily a scholarship)",
+    tuition_discount: "Tuition discount (not a scholarship)",
+    graduate_funding: "Master's / PhD funding",
+    conference_travel_grant: "Conference travel grant",
+    gender_restricted: "Gender-restricted award",
+    institution_restricted: "Institution-restricted award",
+    tuition_policy: "Tuition / cost information (not a scholarship)",
+    student_loan: "Student loan (not a scholarship)",
+    other_funding: "Other funding",
+  };
+
+  return (
+    <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+      {results.map((result, index) => (
+        <article
+          key={`${result.url}-${index}`}
+          className="min-w-0 overflow-hidden rounded-2xl border border-border bg-surface/55 p-3.5 [overflow-wrap:anywhere] min-[375px]:p-4 sm:p-5"
+        >
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="max-w-full rounded-full border border-primary/15 bg-primary-soft px-2.5 py-1 text-[10px] font-medium text-primary">
+              {result.category === "funding"
+                ? opportunityTypeLabels[result.opportunityType]
+                : "Conference / event"}
+            </span>
+            <span
+              className={`max-w-full rounded-full border px-2.5 py-1 text-[10px] font-medium ${statusStyles[result.status]}`}
+            >
+              {statusLabels[result.status]}
+            </span>
+          </div>
+          <h4 className="mt-3 min-w-0 text-sm font-semibold leading-6 text-foreground [overflow-wrap:anywhere]">
+            <a
+              href={result.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-primary hover:underline"
+            >
+              {result.title}
+            </a>
+          </h4>
+          <p className="mt-2 line-clamp-4 text-xs leading-5 text-muted [overflow-wrap:anywhere]">
+            {result.content || "Open the source for details."}
+          </p>
+          <p className="mt-3 text-xs leading-5 text-foreground/85">
+            <span className="font-semibold">Status:</span> {result.statusReason}
+          </p>
+          {result.eventDate && (
+            <p className="mt-2 text-xs leading-5 text-foreground/85">
+              <span className="font-semibold">Event date:</span>{" "}
+              {result.eventDate}
+            </p>
+          )}
+          <p className="mt-2 text-xs leading-5 text-foreground/85">
+            <span className="font-semibold">Deadline:</span>{" "}
+            {result.deadline ?? "Not confirmed"}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-foreground/85">
+            <span className="font-semibold">Eligibility:</span>{" "}
+            {result.eligibility ?? "Not confirmed"}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-foreground/85">
+            <span className="font-semibold">Eligible countries:</span>{" "}
+            {result.eligibleCountries ?? "Not confirmed"}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-foreground/85">
+            <span className="font-semibold">Academic level:</span>{" "}
+            {result.academicLevel ?? "Not confirmed"}
+          </p>
+          {result.category === "funding" && (
+            <p className="mt-2 text-xs leading-5 text-foreground/85">
+              <span className="font-semibold">CS/STEM eligibility:</span>{" "}
+              {result.subjectEligibility ?? "Not confirmed"}
+            </p>
+          )}
+          {result.opportunityType === "tuition_policy" && (
+            <>
+              <p className="mt-2 text-xs leading-5 text-foreground/85">
+                <span className="font-semibold">Tuition fees:</span>{" "}
+                {result.tuitionCost ?? "Not confirmed"}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-foreground/85">
+                <span className="font-semibold">Living costs:</span>{" "}
+                {result.livingCost ?? "Not confirmed"}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-foreground/85">
+                <span className="font-semibold">Visa financial requirement:</span>{" "}
+                {result.visaFinancialRequirement ?? "Not confirmed"}
+              </p>
+            </>
+          )}
+          {result.category === "conference" && (
+            <>
+              <p className="mt-2 text-xs leading-5 text-foreground/85">
+                <span className="font-semibold">Student registration:</span>{" "}
+                {result.registration ?? "Not confirmed"}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-foreground/85">
+                <span className="font-semibold">Paper requirements:</span>{" "}
+                {result.paperRequirements ??
+                  "Not confirmed"}
+              </p>
+            </>
+          )}
+          {result.category === "funding" && (
+            <p className="mt-2 text-xs leading-5 text-foreground/85">
+              <span className="font-semibold">Funding amount:</span>{" "}
+              {result.fundingAmount ?? "Not confirmed"}
+            </p>
+          )}
+          {result.category === "funding" && (
+            <p className="mt-2 text-xs leading-5 text-foreground/85">
+              <span className="font-semibold">Funding coverage:</span>{" "}
+              {result.fundingCoverage ?? "Not confirmed"}
+            </p>
+          )}
+          <a
+            href={result.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex min-h-11 max-w-full items-center gap-1.5 break-all text-xs font-medium text-primary hover:underline"
+          >
+            Source page: {result.sourceName}
+            <ArrowUpRight aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+          </a>
+          {result.category === "funding" && (
+            <p className="mt-2 text-xs leading-5 text-foreground/85 [overflow-wrap:anywhere]">
+              <span className="font-semibold">Official application link:</span>{" "}
+              {result.applicationUrl ? (
+                <a
+                  href={result.applicationUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  Open application page
+                </a>
+              ) : (
+                "Not confirmed"
+              )}
+            </p>
+          )}
+          {result.sourceRole === "primary_source_candidate" ? (
+            <p className="mt-1 text-[10px] leading-4 text-muted">
+              Primary-source candidate; source claims are not independently verified.
+            </p>
+          ) : (
+            <p className="mt-1 text-[10px] leading-4 text-muted">
+              Discovery source only; its claims do not confirm eligibility or deadlines.
+            </p>
+          )}
+          <p className="mt-2 text-[10px] leading-4 text-muted">
+            Last checked:{" "}
+            {new Intl.DateTimeFormat("en", {
+              dateStyle: "medium",
+              timeStyle: "short",
+              timeZone: "UTC",
+            }).format(new Date(result.lastCheckedAt))}{" "}
+            UTC
+          </p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function FundingOpportunitySections({
+  results,
+}: {
+  results: OpportunityResult[];
+}) {
+  if (results.length === 0) return null;
+
+  const potentialMatches = results.filter(
+    (result) =>
+      result.opportunityType === "undergraduate_scholarship" &&
+      result.sourceRole === "primary_source_candidate" &&
+      result.targetFit === "confirmed" &&
+      result.status !== "closed" &&
+      result.status !== "eligibility_restricted",
+  );
+  const universityWaivers = results.filter(
+    (result) =>
+      result.opportunityType === "university_tuition_waiver" &&
+      result.sourceRole === "primary_source_candidate",
+  );
+  const unverifiedLeads = results.filter(
+    (result) =>
+      !potentialMatches.includes(result) &&
+      !universityWaivers.includes(result),
+  );
+
+  return (
+    <div className="space-y-6">
+      {potentialMatches.length > 0 && (
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground/80">
+            Potential undergraduate matches
+          </h4>
+          <>
+            <p className="mb-3 text-xs leading-5 text-muted">
+              Retrieved official-page text appears to support the stated
+              eligibility. Confirm current details with the provider.
+            </p>
+            <WebOpportunityCards results={potentialMatches} />
+          </>
+        </section>
+      )}
+      {universityWaivers.length > 0 && (
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground/80">
+            University-specific tuition waivers
+          </h4>
+          <p className="mb-3 text-xs leading-5 text-muted">
+            These are university-published tuition waivers, not necessarily
+            scholarships. Missing eligibility or dates are not confirmed.
+          </p>
+          <WebOpportunityCards results={universityWaivers} />
+        </section>
+      )}
+      {unverifiedLeads.length > 0 && (
+        <section>
+          <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground/80">
+            Related, unconfirmed results
+          </h4>
+          <p className="mb-3 text-xs leading-5 text-muted">
+            Leads may include postgraduate awards, loans, tuition discounts,
+            general tuition policies, restricted opportunities, and third-party
+            pages. They are not confirmed undergraduate scholarship matches.
+            Missing facts show as “Not confirmed.”
+          </p>
+          <WebOpportunityCards results={unverifiedLeads} />
+        </section>
+      )}
+    </div>
+  );
+}
+
+function ScholarshipNextSteps() {
+  return (
+    <div>
+      <SectionTitle icon="→">Scholarship next steps</SectionTitle>
+      <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3.5 [overflow-wrap:anywhere] min-[375px]:p-4 sm:p-5">
+        <ul className="space-y-3">
+          {[
+            "Open the source page and confirm the current application cycle and deadline.",
+            "Check that Bangladeshi undergraduate Computer Science students meet the country, degree-level, and subject criteria.",
+            "Confirm the award coverage, required documents, and any institution, gender, or conference restrictions.",
+            "Apply only through an application link published by the scholarship provider.",
+          ].map((action) => (
+            <li
+              key={action}
+              className="flex gap-3 text-sm leading-6 text-slate-400"
+            >
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
+              <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                {action}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
 }
 
 function AssistantSidebar({
@@ -640,9 +1042,15 @@ function AIPageContent() {
 
     const updateViewport = () => {
       if (!shell) return;
+      const viewportHeight = Math.floor(
+        Math.min(
+          viewport?.height ?? window.innerHeight,
+          window.innerHeight,
+        ),
+      );
       shell.style.setProperty(
         "--assistant-viewport-height",
-        `${viewport?.height ?? window.innerHeight}px`,
+        `${viewportHeight}px`,
       );
       shell.style.setProperty(
         "--assistant-navbar-height",
@@ -767,7 +1175,10 @@ function AIPageContent() {
           .slice(-8)
           .map((item) => ({
             role: item.role,
-            content: item.content,
+            content:
+              item.role === "assistant"
+                ? getAssistantHistoryContent(item)
+                : item.content,
           }));
 
         const response = await fetch(
@@ -874,35 +1285,28 @@ function AIPageContent() {
   /* Starter prompts                                                          */
   /* ------------------------------------------------------------------------ */
 
-  const starterPrompts = [
-    "I want to visit Dubai for 5 days from Dhaka.",
-    "Plan a 7-day Japan trip for me.",
-    "I have a budget of ৳100,000. Where can I go?",
-    "What documents do I need for a Dubai trip?",
-  ];
-
   /* ------------------------------------------------------------------------ */
   /* Render                                                                   */
   /* ------------------------------------------------------------------------ */
 
   return (
     <>
-      <Navbar />
+      <Navbar useWideBreakpoint />
       <main
         ref={shellRef}
-        className="flex min-h-0 w-full flex-col overflow-hidden bg-background text-foreground"
+        className="assistant-experience flex min-h-0 w-full flex-col overflow-hidden bg-background text-foreground"
         style={{
           height:
             "calc(var(--assistant-viewport-height, 100dvh) - var(--assistant-navbar-height, 72px))",
         }}
       >
         <div className="relative mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 overflow-hidden border-x border-border">
-          <aside className="assistant-sidebar hidden w-[280px] shrink-0 border-r border-border bg-surface/35 lg:block xl:w-[304px]">
+          <aside className="assistant-sidebar hidden w-[280px] shrink-0 border-r border-border bg-surface/35 xl:block 2xl:w-[304px]">
             <AssistantSidebar profile={travelProfile} />
           </aside>
 
           {sidebarOpen && (
-            <div className="absolute inset-0 z-30 lg:hidden">
+            <div className="absolute inset-0 z-30 xl:hidden">
               <button
                 type="button"
                 aria-label="Close travel sidebar"
@@ -947,9 +1351,9 @@ function AIPageContent() {
             <div
               ref={conversationRef}
               aria-label="Conversation"
-              className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-4 py-6 [scrollbar-gutter:stable] sm:px-6 sm:py-8 lg:px-8"
+              className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain px-3 py-4 [scrollbar-gutter:stable] min-[375px]:px-4 sm:px-6 sm:py-6 xl:px-8 xl:py-8"
             >
-              <div className="assistant-context-toolbar sticky top-0 z-10 -mx-4 mb-6 flex min-h-12 items-center gap-2 border-b border-border/60 bg-background/65 px-4 py-1.5 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+              <div className="assistant-context-toolbar sticky top-0 z-10 -mx-3 mb-4 flex min-h-12 items-center px-3 py-1.5 min-[375px]:-mx-4 min-[375px]:px-4 sm:-mx-6 sm:px-6 xl:hidden">
                 <button
                   ref={sidebarTriggerRef}
                   type="button"
@@ -957,67 +1361,86 @@ function AIPageContent() {
                   aria-label="Open travel sidebar"
                   aria-expanded={sidebarOpen}
                   aria-controls="assistant-sidebar-dialog"
-                  className="inline-flex h-9 shrink-0 items-center gap-2 rounded-xl border border-border/80 bg-surface/80 px-3 text-xs font-semibold text-foreground transition hover:border-primary/30 hover:bg-surface-light lg:hidden"
+                  className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-border/80 bg-surface/80 px-3 text-xs font-semibold text-foreground transition hover:border-primary/30 hover:bg-surface-light xl:hidden"
                 >
                   <Menu aria-hidden="true" className="h-4 w-4 text-primary" />
                   <span>Trip tools</span>
                 </button>
-                <div
-                  aria-label="Current trip context"
-                  className="min-w-0 flex-1 overflow-x-auto"
-                >
-                  <TravelProfileTags profile={travelProfile} />
-                </div>
               </div>
               {messages.length === 0 ? (
-                <div className="mx-auto flex min-h-full max-w-3xl flex-col justify-center py-4 sm:py-8">
-                  <div className="mb-8 text-center sm:mb-10">
+                <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col py-4 min-[375px]:py-5 sm:py-8">
+                  <div className="mb-6 text-center min-[375px]:mb-7 sm:mb-9">
                     <div className="mx-auto mb-5 grid h-14 w-14 place-items-center rounded-2xl border border-primary/20 bg-primary-soft text-primary shadow-[0_12px_36px_rgba(8,126,155,0.1)]">
                       <Sparkles aria-hidden="true" className="h-6 w-6" />
                     </div>
 
-                    <h3 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">
+                      Your next chapter starts here
+                    </p>
+                    <h3 className="mx-auto max-w-4xl text-[clamp(1.5rem,4vw,2.5rem)] font-semibold tracking-tight text-foreground">
                       {destination
-                        ? `Planning a trip to ${destination.name}?`
-                        : "Where do you want to go?"}
+                        ? `Let’s plan ${destination.name} and what comes next`
+                        : "Travel further. Find your next opportunity."}
                     </h3>
 
-                    <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-muted">
-                      I can help you understand
-                      costs, documents, visa
-                      requirements, itinerary ideas,
-                      and how to actually plan the
-                      trip.
+                    <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted min-[375px]:text-[15px]">
+                      Plan a memorable trip, discover conferences and funding,
+                      or get clear on the documents you’ll need. Start with a
+                      prompt below or ask anything.
                     </p>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {starterPrompts.map(
-                      (prompt) => (
-                        <button
-                          key={prompt}
-                          type="button"
-                          onClick={() =>
-                            void sendMessage(
-                              prompt,
-                            )
-                          }
-                          disabled={loading}
-                          className="group min-h-20 rounded-2xl border border-border bg-surface/55 p-4 text-left transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-surface-light disabled:cursor-not-allowed disabled:opacity-50"
+                  <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
+                    {starterCategories.map((category) => {
+                      const Icon = category.icon;
+
+                      return (
+                        <section
+                          key={category.title}
+                          className="group min-w-0 rounded-2xl border border-border bg-surface/55 p-3.5 transition-colors hover:border-primary/25 hover:bg-surface/80 min-[375px]:p-4 sm:p-5"
+                          aria-label={category.title}
                         >
-                          <p className="text-sm leading-6 text-foreground/85">
-                            {prompt}
-                          </p>
-                          <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-                            Try this prompt <span aria-hidden="true">→</span>
-                          </span>
-                        </button>
-                      ),
-                    )}
+                          <div className="mb-4 flex items-start gap-3">
+                            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-primary/15 bg-primary-soft text-primary">
+                              <Icon aria-hidden="true" className="h-5 w-5" />
+                            </span>
+                            <div className="min-w-0">
+                              <h4 className="break-words text-sm font-semibold leading-5 text-foreground">
+                                {category.title}
+                              </h4>
+                              <p className="mt-1 text-xs leading-5 text-muted">
+                                {category.description}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="grid gap-2">
+                            {category.prompts.map((prompt) => (
+                              <button
+                                key={prompt}
+                                type="button"
+                                onClick={() => void sendMessage(prompt)}
+                                disabled={loading}
+                                className="group/prompt flex min-h-11 items-center justify-between gap-3 rounded-xl border border-border/70 bg-background/45 px-3 py-2.5 text-left text-xs leading-5 text-foreground/85 transition-colors hover:border-primary/25 hover:bg-primary-soft/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-50 sm:text-[13px]"
+                              >
+                                <span>{prompt}</span>
+                                <ArrowRight
+                                  aria-hidden="true"
+                                  className="h-4 w-4 shrink-0 text-primary opacity-70 transition-transform group-hover/prompt:translate-x-0.5 group-hover/prompt:opacity-100"
+                                />
+                              </button>
+                            ))}
+                          </div>
+                        </section>
+                      );
+                    })}
                   </div>
+                  <p className="mt-5 break-words text-center text-[11px] leading-5 text-muted">
+                    Live web results are unverified. Check the original sources
+                    for current deadlines, eligibility, and travel requirements.
+                  </p>
                 </div>
               ) : (
-                <div className="mx-auto max-w-3xl space-y-7 pb-3 sm:space-y-9 sm:pb-5">
+                <div className="mx-auto w-full max-w-5xl space-y-6 pb-3 sm:space-y-8 sm:pb-5">
                   {messages.map(
                     (item, index) => (
                       <div
@@ -1029,13 +1452,13 @@ function AIPageContent() {
                         }
                       >
                         {item.role === "user" ? (
-                          <div className="max-w-[92%] break-words rounded-2xl rounded-br-md border border-primary/15 bg-primary-soft/70 px-4 py-3.5 sm:max-w-[85%] sm:px-5 sm:py-4">
+                          <div className="max-w-[96%] break-words rounded-2xl rounded-br-md border border-primary/15 bg-primary-soft/70 px-3.5 py-3 sm:max-w-[85%] sm:px-5 sm:py-4 [overflow-wrap:anywhere]">
                             <p className="whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
                               {item.content}
                             </p>
                           </div>
                         ) : (
-                          <div className="w-full max-w-3xl">
+                          <div className="w-full min-w-0 max-w-5xl">
                             <div className="mb-3 flex items-center gap-2">
                               <div className="grid h-7 w-7 place-items-center rounded-lg bg-primary-soft text-primary">
                                 <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
@@ -1053,7 +1476,7 @@ function AIPageContent() {
                               </p>
 
                               {/* Trip context */}
-                              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
+                              <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3.5 min-[375px]:p-4 sm:p-5">
                                 <SectionTitle icon="🧭">
                                   Trip context
                                 </SectionTitle>
@@ -1075,7 +1498,7 @@ function AIPageContent() {
                                     Suggestions
                                   </SectionTitle>
 
-                                  <div className="grid gap-3 md:grid-cols-2">
+                                  <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                                     {item.data.recommendations.map(
                                       (
                                         recommendation,
@@ -1083,21 +1506,21 @@ function AIPageContent() {
                                       ) => (
                                         <div
                                           key={`${recommendation.title}-${recommendationIndex}`}
-                                          className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5"
+                                          className="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3.5 min-[375px]:p-4 sm:p-5 [overflow-wrap:anywhere]"
                                         >
-                                          <h4 className="text-sm font-semibold text-white">
+                                          <h4 className="break-words text-sm font-semibold text-white [overflow-wrap:anywhere]">
                                             {
                                               recommendation.title
                                             }
                                           </h4>
 
-                                          <p className="mt-2 text-sm leading-6 text-slate-400">
+                                          <p className="mt-2 break-words text-sm leading-6 text-slate-400 [overflow-wrap:anywhere]">
                                             {
                                               recommendation.description
                                             }
                                           </p>
 
-                                          <p className="mt-3 text-xs leading-5 text-sky-300/80">
+                                          <p className="mt-3 break-words text-xs leading-5 text-sky-300/80 [overflow-wrap:anywhere]">
                                             {
                                               recommendation.reason
                                             }
@@ -1109,16 +1532,121 @@ function AIPageContent() {
                                 </div>
                               )}
 
+                              {/* Live web results */}
+                              {(item.data.webResults?.length ?? 0) > 0 ||
+                                item.data.fundingSearchPerformed === true ? (
+                                <section>
+                                  <SectionTitle icon="🔎">
+                                    Live web results
+                                  </SectionTitle>
+                                  <p className="-mt-2 mb-4 text-xs leading-5 text-muted [overflow-wrap:anywhere]">
+                                    External web sources are not verified by
+                                    TISA. Undergraduate scholarships are listed
+                                    separately from graduate funding, conference
+                                    travel grants, and restricted awards.
+                                    Confirm dates, eligibility, application
+                                    status, and funding on each source page.
+                                  </p>
+                                  {item.data.webResults?.some(
+                                    (result) => result.category === "funding",
+                                  ) ||
+                                    item.data.fundingSearchPerformed === true ? (
+                                    <div className="mb-6">
+                                      <FundingOpportunitySections
+                                        results={
+                                          item.data.webResults?.filter(
+                                            (result) =>
+                                              result.category === "funding",
+                                          ) ?? []
+                                        }
+                                      />
+                                    </div>
+                                  ) : null}
+                                  {item.data.webResults?.some(
+                                    (result) =>
+                                      result.category === "conference" &&
+                                      result.status !== "eligibility_restricted" &&
+                                      result.status !== "closed" &&
+                                      result.relevance !== "other",
+                                  ) && (
+                                    <div className="mb-6">
+                                      <h4 className="mb-3 text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                                        Priority matches
+                                      </h4>
+                                      <WebOpportunityCards
+                                        results={item.data.webResults.filter(
+                                          (result) =>
+                                            result.category === "conference" &&
+                                            result.status !== "eligibility_restricted" &&
+                                            result.status !== "closed" &&
+                                            result.relevance !== "other",
+                                        )}
+                                      />
+                                    </div>
+                                  )}
+                                  {item.data.webResults?.some(
+                                    (result) =>
+                                      result.category === "conference" &&
+                                      (result.status === "eligibility_restricted" ||
+                                        result.status === "closed"),
+                                  ) && (
+                                    <div className="mb-6">
+                                      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                                        Closed or eligibility-restricted
+                                      </h4>
+                                      <p className="mb-3 text-xs leading-5 text-muted">
+                                        These are shown for context and are not
+                                        primary recommendations.
+                                      </p>
+                                      <WebOpportunityCards
+                                        results={item.data.webResults.filter(
+                                          (result) =>
+                                            result.category === "conference" &&
+                                            (result.status === "eligibility_restricted" ||
+                                              result.status === "closed"),
+                                        )}
+                                      />
+                                    </div>
+                                  )}
+                                  {item.data.webResults?.some(
+                                    (result) =>
+                                      result.category === "conference" &&
+                                      result.status !== "eligibility_restricted" &&
+                                      result.status !== "closed" &&
+                                      result.relevance === "other",
+                                  ) && (
+                                    <div>
+                                      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground/80">
+                                        Other search matches
+                                      </h4>
+                                      <p className="mb-3 text-xs leading-5 text-muted">
+                                        These results lack enough evidence of
+                                        a close fit to the target profile.
+                                      </p>
+                                      <WebOpportunityCards
+                                        results={item.data.webResults.filter(
+                                          (result) =>
+                                            result.category === "conference" &&
+                                            result.status !== "eligibility_restricted" &&
+                                            result.status !== "closed" &&
+                                            result.relevance === "other",
+                                        )}
+                                      />
+                                    </div>
+                                  )}
+                                </section>
+                              ) : null}
+
                               {/* Verified events */}
                               {item.data.events.length > 0 && (
                                 <div>
                                   <SectionTitle icon="📅">Verified events for you</SectionTitle>
 
-                                  <div className="grid gap-3 md:grid-cols-2">
+                                  <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                                     {item.data.events.map((event) => (
                                       <div
                                         key={event.id}
-                                        className="rounded-2xl border border-emerald-400/10 bg-emerald-400/[0.025] p-5"
+                                        className="min-w-0 overflow-hidden rounded-2xl border border-emerald-400/10 bg-emerald-400/[0.025] p-3.5 [overflow-wrap:anywhere] min-[375px]:p-4 sm:p-5"
                                       >
                                         <div className="flex flex-wrap items-center gap-2">
                                           <span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-[11px] font-medium text-emerald-300">
@@ -1128,7 +1656,7 @@ function AIPageContent() {
                                             <span className="text-[11px] text-slate-500">{event.category}</span>
                                           )}
                                         </div>
-                                        <h4 className="mt-3 text-sm font-semibold text-white">{event.title}</h4>
+                                        <h4 className="mt-3 break-words text-sm font-semibold text-white [overflow-wrap:anywhere]">{event.title}</h4>
                                         <p className="mt-2 text-xs text-slate-500">
                                           {[event.city, event.country].filter(Boolean).join(", ") || "International"}
                                           {event.startDate ? ` · ${event.startDate}` : ""}
@@ -1136,7 +1664,7 @@ function AIPageContent() {
                                         {event.invitationAvailability && (
                                           <p className="mt-2 text-xs text-slate-400">Invitation: {event.invitationAvailability}</p>
                                         )}
-                                        <p className="mt-3 text-xs leading-5 text-slate-400">{event.reason}</p>
+                                        <p className="mt-3 break-words text-xs leading-5 text-slate-400 [overflow-wrap:anywhere]">{event.reason}</p>
                                         <div className="mt-4 flex flex-wrap items-center gap-3">
                                           <Link href={`/events/${event.slug}`} className="text-xs font-medium text-sky-300">View event →</Link>
                                           {event.sourceUrl && (
@@ -1166,7 +1694,7 @@ function AIPageContent() {
                                       (day) => (
                                         <div
                                           key={day.day}
-                                          className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5"
+                                          className="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3.5 [overflow-wrap:anywhere] min-[375px]:p-4 sm:p-5"
                                         >
                                           <div className="flex gap-4">
                                             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-400/[0.08] text-xs font-semibold text-sky-300">
@@ -1174,7 +1702,7 @@ function AIPageContent() {
                                             </div>
 
                                             <div className="min-w-0">
-                                              <h4 className="text-sm font-semibold text-white">
+                                              <h4 className="break-words text-sm font-semibold text-white [overflow-wrap:anywhere]">
                                                 {
                                                   day.title
                                                 }
@@ -1188,11 +1716,11 @@ function AIPageContent() {
                                                   ) => (
                                                     <li
                                                       key={`${day.day}-${activityIndex}`}
-                                                      className="flex gap-2 text-sm leading-6 text-slate-400"
+                                                      className="flex min-w-0 gap-2 text-sm leading-6 text-slate-400 [overflow-wrap:anywhere]"
                                                     >
                                                       <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-slate-500" />
 
-                                                      <span>
+                                                      <span className="min-w-0 break-words [overflow-wrap:anywhere]">
                                                         {
                                                           activity
                                                         }
@@ -1211,17 +1739,18 @@ function AIPageContent() {
                               )}
 
                               {/* Cost estimate */}
-                              <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
+                              {!isFundingInquiry(messages, index) && (
+                              <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3.5 min-[375px]:p-4 sm:p-5">
                                 <SectionTitle icon="💰">
                                   Estimated cost
                                 </SectionTitle>
 
-                                <div className="mb-5 rounded-xl border border-sky-400/10 bg-sky-400/[0.04] p-4">
+                                <div className="mb-5 min-w-0 rounded-xl border border-sky-400/10 bg-sky-400/[0.04] p-3.5 min-[375px]:p-4">
                                   <p className="text-xs text-slate-500">
                                     Estimated total
                                   </p>
 
-                                  <p className="mt-1 text-2xl font-semibold tracking-tight text-white">
+                                  <p className="mt-1 break-words text-xl font-semibold tracking-tight text-white min-[375px]:text-2xl [overflow-wrap:anywhere]">
                                     {formatCurrency(
                                       item.data
                                         .costEstimate
@@ -1295,7 +1824,7 @@ function AIPageContent() {
                                           key={
                                             label as string
                                           }
-                                          className="rounded-xl border border-white/[0.06] bg-black/10 p-4"
+                                          className="min-w-0 rounded-xl border border-white/[0.06] bg-black/10 p-3 [overflow-wrap:anywhere] min-[375px]:p-4"
                                         >
                                           <p className="text-xs text-slate-500">
                                             {
@@ -1303,7 +1832,7 @@ function AIPageContent() {
                                             }
                                           </p>
 
-                                          <p className="mt-1 text-sm font-medium text-slate-200">
+                                          <p className="mt-1 break-words text-sm font-medium text-slate-200 [overflow-wrap:anywhere]">
                                             {formatCurrency(
                                               cost.min,
                                               item.data
@@ -1332,6 +1861,7 @@ function AIPageContent() {
                                   }
                                 </p>
                               </div>
+                              )}
 
                               {/* Documents */}
                               {item.data
@@ -1351,17 +1881,17 @@ function AIPageContent() {
                                       ) => (
                                         <div
                                           key={`${document.name}-${documentIndex}`}
-                                          className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5"
+                                          className="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3.5 [overflow-wrap:anywhere] min-[375px]:p-4 sm:p-5"
                                         >
-                                          <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                              <h4 className="text-sm font-semibold text-white">
+                                          <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+                                            <div className="min-w-0 flex-1">
+                                              <h4 className="break-words text-sm font-semibold text-white [overflow-wrap:anywhere]">
                                                 {
                                                   document.name
                                                 }
                                               </h4>
 
-                                              <p className="mt-2 text-sm leading-6 text-slate-400">
+                                              <p className="mt-2 break-words text-sm leading-6 text-slate-400 [overflow-wrap:anywhere]">
                                                 {
                                                   document.description
                                                 }
@@ -1369,7 +1899,7 @@ function AIPageContent() {
                                             </div>
 
                                             <span
-                                              className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+                                              className={`max-w-full shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium ${
                                                 document.status ===
                                                 "likely"
                                                   ? "bg-emerald-400/10 text-emerald-300"
@@ -1392,7 +1922,9 @@ function AIPageContent() {
                               )}
 
                               {/* Next actions */}
-                              {item.data
+                              {isFundingInquiry(messages, index) ? (
+                                <ScholarshipNextSteps />
+                              ) : item.data
                                 .nextActions
                                 .length > 0 && (
                                 <div>
@@ -1400,7 +1932,7 @@ function AIPageContent() {
                                     Next steps
                                   </SectionTitle>
 
-                                  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-5">
+                                  <div className="min-w-0 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3.5 [overflow-wrap:anywhere] min-[375px]:p-4 sm:p-5">
                                     <ul className="space-y-3">
                                       {item.data.nextActions.map(
                                         (
@@ -1415,7 +1947,7 @@ function AIPageContent() {
                                           >
                                             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
 
-                                            <span>
+                                            <span className="min-w-0 break-words [overflow-wrap:anywhere]">
                                               {
                                                 action
                                               }
@@ -1429,9 +1961,10 @@ function AIPageContent() {
                               )}
 
                               {/* Build this trip */}
-                              <div className="rounded-2xl border border-sky-400/15 bg-gradient-to-br from-sky-400/[0.07] to-transparent p-5">
-                                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                                  <div>
+                              {!isFundingInquiry(messages, index) && (
+                              <div className="min-w-0 rounded-2xl border border-sky-400/15 bg-gradient-to-br from-sky-400/[0.07] to-transparent p-3.5 [overflow-wrap:anywhere] min-[375px]:p-4 sm:p-5">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                  <div className="min-w-0">
                                     <h3 className="text-sm font-semibold text-white">
                                       Ready to build this
                                       trip?
@@ -1452,7 +1985,7 @@ function AIPageContent() {
                                     href={getPlannerUrl(
                                       item.data,
                                     )}
-                                    className="inline-flex h-11 shrink-0 items-center justify-center rounded-xl bg-sky-400 px-5 text-sm font-semibold text-slate-950 transition-colors hover:bg-sky-300"
+                                    className="inline-flex min-h-11 w-full shrink-0 items-center justify-center rounded-xl bg-sky-400 px-5 text-sm font-semibold text-slate-950 transition-colors hover:bg-sky-300 md:w-auto"
                                   >
                                     Build this trip
                                     <span className="ml-2">
@@ -1461,6 +1994,7 @@ function AIPageContent() {
                                   </a>
                                 </div>
                               </div>
+                              )}
                             </div>
                           </div>
                         )}
@@ -1471,7 +2005,7 @@ function AIPageContent() {
                   {/* Loading */}
                   {loading && (
                     <div className="flex justify-start">
-                      <div role="status" className="w-full max-w-3xl">
+                      <div role="status" className="w-full max-w-5xl">
                         <div className="mb-3 flex items-center gap-2">
                           <div className="grid h-7 w-7 place-items-center rounded-lg bg-primary-soft text-primary">
                             <Sparkles aria-hidden="true" className="h-3.5 w-3.5" />
@@ -1498,7 +2032,7 @@ function AIPageContent() {
 
               {/* Error */}
               {error && (
-                <div role="alert" className="mx-auto mt-6 max-w-3xl rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-4">
+                <div role="alert" className="mx-auto mt-6 w-full max-w-5xl break-words rounded-2xl border border-red-500/20 bg-red-500/[0.06] p-4 [overflow-wrap:anywhere]">
                   <p className="text-sm leading-6 text-red-600 dark:text-red-300">
                     {error}
                   </p>
@@ -1507,10 +2041,10 @@ function AIPageContent() {
             </div>
 
             {/* Composer */}
-            <div className="assistant-composer z-10 shrink-0 border-t border-border bg-background/95 px-3 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur sm:px-6 sm:py-5 lg:px-8">
+            <div className="assistant-composer z-10 shrink-0 border-t border-border bg-background/95 px-2.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] backdrop-blur min-[375px]:px-3 min-[375px]:pt-3 sm:px-6 sm:py-4 xl:px-8">
               <form
                 onSubmit={handleSubmit}
-                className="mx-auto max-w-3xl"
+                className="mx-auto w-full max-w-5xl"
               >
                 <div className="flex items-end gap-2 rounded-2xl border border-border bg-surface/70 p-2 transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10 sm:gap-3">
                   <textarea
@@ -1531,8 +2065,8 @@ function AIPageContent() {
                     }}
                     rows={1}
                     aria-label="Message TISA AI"
-                    placeholder="Tell TISA Global about your trip..."
-                    className="max-h-[min(35dvh,180px)] min-h-11 min-w-0 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2.5 text-sm leading-6 text-foreground outline-none placeholder:text-muted sm:px-3"
+                    placeholder="Ask about trips, conferences, funding, or travel documents..."
+                    className="max-h-[min(35dvh,180px)] min-h-11 min-w-0 flex-1 resize-none overflow-y-auto bg-transparent px-2 py-2.5 text-sm leading-6 text-foreground outline-none placeholder:line-clamp-2 placeholder:text-muted sm:px-3"
                   />
 
                   <button

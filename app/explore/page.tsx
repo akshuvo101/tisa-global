@@ -104,7 +104,7 @@ function ExplorePageContent() {
   }
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="customer-discovery-page min-h-screen bg-background text-foreground">
       <Navbar />
 
       {/* Compact Hero */}
