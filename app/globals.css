@@ -289,6 +289,22 @@ body {
   animation: global-travel-slow-zoom 16s linear both;
 }
 
+@media (max-width: 639px) {
+  .global-travel-background__slide {
+    will-change: auto;
+  }
+
+  .global-travel-background__image {
+    transform: none;
+    filter: none;
+  }
+
+  .global-travel-background__slide--active
+    .global-travel-background__image {
+    animation: none;
+  }
+}
+
 .global-travel-background__overlay {
   position: absolute;
   inset: 0;
@@ -5075,11 +5091,17 @@ html[data-theme="dark"] .request-page__error {
 
   .home-page .home-ai-cta__frame {
     border-radius: 1.5rem;
+    background: color-mix(in srgb, var(--surface-light) 98%, var(--background));
+    box-shadow: 0 12px 32px rgba(1, 10, 18, 0.16);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
   }
 
-  .home-page .home-ai-cta__world-map {
-    background-size: 8px 8px, 100% 100%;
-    opacity: 0.1;
+  .home-page .home-ai-cta__atmosphere,
+  .home-page .home-ai-cta__world-map,
+  .home-page .home-ai-cta__orbit,
+  .home-page .home-ai-cta__chat-glow {
+    display: none;
   }
 
   .home-page .home-ai-cta__scene {
@@ -5102,6 +5124,19 @@ html[data-theme="dark"] .request-page__error {
     border-radius: 0.9rem;
     animation: none;
     transform: none;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
+  }
+
+  .home-page .home-ai-cta__chat-window {
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  }
+
+  .home-page .home-ai-cta__bot-mark,
+  .home-page .home-ai-cta__assistant-mark,
+  .home-page .home-ai-cta__user-message,
+  .home-page .home-ai-cta__prompt,
+  .home-page .home-ai-cta__send-mark {
+    box-shadow: none;
   }
 
   .home-page .home-ai-cta__destination-caption {
@@ -5122,6 +5157,10 @@ html[data-theme="dark"] .request-page__error {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .home-page .home-ai-cta__destination {
+    animation: none !important;
+  }
+
   .home-page .home-ai-cta *,
   .home-page .home-ai-cta *::before,
   .home-page .home-ai-cta *::after {

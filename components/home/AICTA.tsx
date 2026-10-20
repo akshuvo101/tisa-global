@@ -118,11 +118,12 @@ export default function AICTA() {
               <div className="home-ai-cta__destination-cards" aria-hidden="true">
                 <div className="home-ai-cta__destination home-ai-cta__destination--mountains">
                   <Image
-                    src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=78"
+                    src="https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=480&q=70"
                     alt=""
                     fill
                     sizes="(max-width: 639px) 44vw, 190px"
-                    quality={75}
+                    quality={65}
+                    loading="lazy"
                     className="object-cover"
                   />
                   <span className="home-ai-cta__destination-caption">
@@ -132,11 +133,12 @@ export default function AICTA() {
                 </div>
                 <div className="home-ai-cta__destination home-ai-cta__destination--flight">
                   <Image
-                    src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=900&q=78"
+                    src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=480&q=70"
                     alt=""
                     fill
                     sizes="(max-width: 639px) 44vw, 190px"
-                    quality={75}
+                    quality={65}
+                    loading="lazy"
                     className="object-cover"
                   />
                   <span className="home-ai-cta__destination-caption">
