@@ -21,7 +21,6 @@ const navItems = [
   { label: "Services", href: "/services" },
   { label: "Conferences", href: "/events" },
   { label: "Destinations", href: "/explore" },
-  { label: "Packages", href: "/packages" },
   { label: "Articles", href: "/articles" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "/contact" },
